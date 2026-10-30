@@ -1,0 +1,49 @@
+--- vulnerable_app/app.py
++++ vulnerable_app/patched_app.py
+@@ -2,9 +2,10 @@
+ import sqlite3
+ from pathlib import Path
+ 
+-from flask import Flask, jsonify, request
++from flask import Flask, jsonify, request, session
+ 
+ app = Flask(__name__)
++app.secret_key = "local-demo-only-change-this"
+ 
+ DATABASE = Path(__file__).parent / "patchproof.db"
+ 
+@@ -82,10 +83,10 @@
+ 
+     # INTENTIONALLY VULNERABLE:
+     # User input is directly inserted into SQL.
+-    query = f"SELECT * FROM users WHERE username = '{username}'"
++    query = "SELECT * FROM users WHERE username = ?"
+ 
+     try:
+-        results = connection.execute(query).fetchall()
++        results = connection.execute(query, (username,)).fetchall()
+ 
+         return jsonify([dict(row) for row in results])
+ 
+@@ -98,15 +99,18 @@
+ # VULNERABILITY 2: Broken Access Control (IDOR)
+ @app.route("/orders/<int:order_id>")
+ def get_order(order_id):
+-    user_id = request.args.get("user_id", type=int)
++    user_id = session.get("user_id")
++
++    if user_id is None:
++        return jsonify({"error": "Authentication required"}), 401
+ 
+     connection = get_database()
+ 
+     # INTENTIONALLY VULNERABLE:
+     # The requested order is fetched without checking ownership.
+     order = connection.execute(
+-        "SELECT * FROM orders WHERE id = ?",
+-        (order_id,)
++        "SELECT * FROM orders WHERE id = ? AND user_id = ?",
++        (order_id, user_id)
+     ).fetchone()
+ 
+     connection.close()

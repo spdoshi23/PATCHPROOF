@@ -1,0 +1,36 @@
+{
+    "project": "PATCHPROOF",
+    "generated_at": "2026-10-30T18:51:03",
+    "scan_target": "vulnerable_app\\app.py",
+    "summary": {
+        "total_vulnerabilities": 2,
+        "high": 2,
+        "medium": 0,
+        "low": 0
+    },
+    "findings": [
+        {
+            "type": "SQL Injection",
+            "severity": "High",
+            "line": 85,
+            "evidence": "An f-string SQL query is passed to execute().",
+            "file": "C:\\Users\\Shubham\\Developer\\PATCHPROOF\\vulnerable_app\\app.py"
+        },
+        {
+            "type": "Broken Access Control (IDOR)",
+            "severity": "High",
+            "line": 107,
+            "evidence": "Order query does not check order ownership.",
+            "file": "C:\\Users\\Shubham\\Developer\\PATCHPROOF\\vulnerable_app\\app.py"
+        }
+    ],
+    "patch": {
+        "status": "Generated",
+        "patched_file": "vulnerable_app/patched_app.py",
+        "diff_file": "reports/security_patch.diff"
+    },
+    "validation": {
+        "status": "Passed",
+        "note": "The patched application passed all 4 dedicated security and regression tests."
+    }
+}
