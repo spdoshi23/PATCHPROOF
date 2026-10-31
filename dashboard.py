@@ -303,11 +303,11 @@ elif page == "Patch Review":
                     unsafe_allow_html=True)
         diff = DIFF.read_text(encoding="utf-8")
         st.download_button("DOWNLOAD UNIFIED PATCH DIFF", diff, "security_patch.diff", "text/x-diff")
-        with st.expander("Inspect exact source diff"):
-            st.code(diff, language="diff", line_numbers=True)
-        with st.expander("Inspect complete patched application source"):
-            st.code(PATCHED.read_text(encoding="utf-8"), language="python", line_numbers=True)
+        st.markdown('<div class="sectionline"><h2>Unified patch diff</h2><span>LIVE PREVIEW</span></div>', unsafe_allow_html=True)
+        st.code(diff, language="diff", line_numbers=True)
         st.download_button("DOWNLOAD PATCHED APP", PATCHED.read_bytes(), "patched_app.py", "text/x-python")
+        st.markdown('<div class="sectionline"><h2>Patched application source</h2><span>COMPLETE FILE</span></div>', unsafe_allow_html=True)
+        st.code(PATCHED.read_text(encoding="utf-8"), language="python", line_numbers=True)
     else:
         st.info("Patch artefacts are not available yet. Run the investigation to generate the patched copy and diff.")
 
@@ -358,8 +358,8 @@ elif page == "Evidence":
         c.metric("Validation", validation.get("status", "—"))
         report_text = json.dumps(report, indent=4)
         st.download_button("DOWNLOAD SECURITY REPORT JSON", report_text, "security_report.json", "application/json")
-        with st.expander("Preview machine-readable assessment"):
-            st.json(report)
+        st.markdown('<div class="sectionline"><h2>Security assessment preview</h2><span>JSON · LIVE</span></div>', unsafe_allow_html=True)
+        st.json(report, expanded=True)
     else:
         st.info("No report is available yet. The report is generated after the regression suite passes.")
 
@@ -375,7 +375,18 @@ elif page == "Evidence":
                     f'{html.escape(str(path.relative_to(ROOT)))}</div></div><span class="status {"ok" if available else "wait"}">'
                     f'{"AVAILABLE" if available else "NOT GENERATED"}</span></div>', unsafe_allow_html=True)
         if available:
-            st.download_button("DOWNLOAD " + path.name.upper(), path.read_bytes(), path.name, mime, key="evidence_" + path.name)
+            file_bytes = path.read_bytes()
+            st.download_button("DOWNLOAD " + path.name.upper(), file_bytes, path.name, mime, key="evidence_" + path.name)
+            st.markdown('<div class="sectionline"><h2>' + html.escape(title) + ' · preview</h2><span>ON-PAGE CONTENT</span></div>', unsafe_allow_html=True)
+            if path.suffix == ".json":
+                try:
+                    st.json(json.loads(file_bytes.decode("utf-8")), expanded=True)
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    st.code(file_bytes.decode("utf-8", errors="replace"), language="text")
+            elif path.suffix == ".diff":
+                st.code(file_bytes.decode("utf-8", errors="replace"), language="diff", line_numbers=True)
+            elif path.suffix == ".py":
+                st.code(file_bytes.decode("utf-8", errors="replace"), language="python", line_numbers=True)
 
 # -------------------------------- scope ---------------------------------------
 elif page == "Scope":

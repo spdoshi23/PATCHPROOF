@@ -1,6 +1,6 @@
 {
     "project": "PATCHPROOF",
-    "generated_at": "2026-10-31T14:22:32",
+    "generated_at": "2026-10-31T14:32:35",
     "scan_target": "vulnerable_app\\app.py",
     "summary": {
         "total_vulnerabilities": 2,
