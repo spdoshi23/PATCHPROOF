@@ -7,10 +7,9 @@ from pathlib import Path
 
 import streamlit as st
 
-# PATCHPROOF — Security Incident Response Workbench
-
+# PATCHPROOF — case-file style security investigation workspace.
+# Existing scanner, patcher, pytest suite and report generator remain unchanged.
 ROOT = Path(__file__).resolve().parent
-
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -23,450 +22,75 @@ PATCHED = ROOT / "vulnerable_app" / "patched_app.py"
 DIFF = ROOT / "reports" / "security_patch.diff"
 REPORT = ROOT / "reports" / "security_report.json"
 
+st.set_page_config(page_title="PATCHPROOF — Security Investigation", page_icon="◩", layout="wide", initial_sidebar_state="collapsed")
 
-st.set_page_config(
-    page_title="PATCHPROOF — Security Workbench",
-    page_icon="⬡",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-
-# ============================================================
-# VISUAL SYSTEM
-# ============================================================
-
-st.markdown("""
+st.markdown(r"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&display=swap');
-
-:root {
-    --paper: #f1efe8;
-    --surface: #fbfaf6;
-    --ink: #17242b;
-    --muted: #68767a;
-    --rule: #d8d7cf;
-    --blue: #2457d6;
-    --blue-soft: #e7edff;
-    --red: #c84c3a;
-    --red-soft: #f8e9e5;
-    --green: #28734f;
-    --green-soft: #e5f1e9;
-    --yellow-soft: #f8efd9;
-}
-
-html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
-}
-
-.stApp {
-    background: var(--paper);
-    color: var(--ink);
-}
-
-[data-testid="stHeader"] {
-    background: rgba(241,239,232,.92);
-}
-
-[data-testid="stSidebar"] {
-    background: #18262d;
-    border-right: 1px solid #34454b;
-}
-
-[data-testid="stSidebar"] * {
-    color: #e9eee9;
-}
-
-[data-testid="stSidebar"] [data-testid="stRadio"] label {
-    padding: 10px 12px;
-    border-radius: 5px;
-    margin: 3px 0;
-    color: #c5d0ce !important;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
-    background: #2b414a;
-    color: white !important;
-    border-left: 3px solid #8fb4ff;
-}
-
-[data-testid="stSidebar"] [data-testid="stRadio"] label p {
-    color: inherit !important;
-}
-
-[data-testid="stSidebar"] [data-testid="stRadio"] input {
-    display: none;
-}
-
-[data-testid="stSidebar"] hr {
-    border-color: #3b4a50;
-}
-
-[data-testid="stSidebar"] [data-testid="stCaption"] {
-    color: #aab9b7 !important;
-}
-
-.block-container {
-    max-width: 1500px;
-    padding: 1.8rem 2.7rem 3.5rem;
-}
-
-h1, h2, h3, h4 {
-    color: var(--ink) !important;
-    letter-spacing: -.045em;
-}
-
-p, li {
-    color: #45545a;
-}
-
-small, [data-testid="stCaption"] {
-    color: var(--muted) !important;
-}
-
-hr {
-    border-color: var(--rule) !important;
-}
-
-code, pre {
-    font-family: 'DM Mono', monospace !important;
-}
-
-.masthead {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 0 17px;
-    border-bottom: 2px solid var(--ink);
-    margin-bottom: 26px;
-}
-
-.wordmark {
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: .13em;
-    color: var(--ink);
-}
-
-.wordmark span {
-    color: var(--blue);
-}
-
-.mast-sub {
-    font: 10px 'DM Mono';
-    letter-spacing: .12em;
-    color: var(--muted);
-    margin-top: 4px;
-}
-
-.top-state {
-    font: 10px 'DM Mono';
-    letter-spacing: .12em;
-    text-align: right;
-    color: var(--green);
-}
-
-.eyebrow {
-    font: 10px 'DM Mono';
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    color: var(--muted);
-}
-
-.title-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--rule);
-    margin-bottom: 24px;
-}
-
-.page-title {
-    font-size: 35px;
-    font-weight: 800;
-    line-height: 1.05;
-    margin: 7px 0 8px;
-}
-
-.page-intro {
-    font-size: 13px;
-    color: var(--muted);
-    max-width: 720px;
-    line-height: 1.65;
-}
-
-.stamp {
-    font: 10px 'DM Mono';
-    letter-spacing: .08em;
-    padding: 8px 10px;
-    border: 1px solid #aeb6b3;
-    color: #46565b;
-    background: #f8f7f1;
-    white-space: nowrap;
-}
-
-.panel {
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    padding: 19px 20px;
-    margin-bottom: 14px;
-}
-
-.panel-dark {
-    background: #1b2b33;
-    color: #f4f4ec;
-    padding: 22px 23px;
-    margin-bottom: 14px;
-}
-
-.panel-dark h2,
-.panel-dark h3,
-.panel-dark p {
-    color: #f4f4ec !important;
-}
-
-.panel-kicker {
-    font: 10px 'DM Mono';
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: #78868a;
-}
-
-.panel-dark .panel-kicker {
-    color: #9db6ba;
-}
-
-.big-number {
-    font-size: 36px;
-    font-weight: 800;
-    letter-spacing: -.06em;
-    margin-top: 8px;
-    color: var(--ink);
-}
-
-.stat-label {
-    font: 10px 'DM Mono';
-    letter-spacing: .12em;
-    text-transform: uppercase;
-    color: var(--muted);
-}
-
-.stat-note {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 2px;
-}
-
-.stat-block {
-    background: var(--surface);
-    border-top: 3px solid var(--blue);
-    padding: 14px 16px;
-    min-height: 105px;
-    border-right: 1px solid var(--rule);
-    border-bottom: 1px solid var(--rule);
-    border-left: 1px solid var(--rule);
-}
-
-.rule-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 13px 0;
-    border-bottom: 1px solid var(--rule);
-}
-
-.rule-row:last-child {
-    border-bottom: 0;
-}
-
-.rule-number {
-    font: 11px 'DM Mono';
-    color: var(--blue);
-    padding-top: 2px;
-}
-
-.rule-name {
-    font-weight: 700;
-    font-size: 13px;
-    color: var(--ink);
-}
-
-.rule-desc {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 3px;
-    line-height: 1.5;
-}
-
-.tag {
-    display: inline-block;
-    font: 9px 'DM Mono';
-    letter-spacing: .08em;
-    padding: 5px 7px;
-    border: 1px solid #d8aaa2;
-    background: var(--red-soft);
-    color: #963b2e;
-}
-
-.finding-card {
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-left: 4px solid var(--red);
-    padding: 17px 19px;
-    margin: 12px 0;
-}
-
-.finding-card h3 {
-    font-size: 16px;
-    margin: 0;
-}
-
-.finding-meta {
-    font: 10px 'DM Mono';
-    letter-spacing: .07em;
-    color: var(--muted);
-    margin: 8px 0 12px;
-}
-
-.finding-card p {
-    font-size: 12px;
-    line-height: 1.6;
-    margin: 5px 0;
-}
-
-.stage-line {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--rule);
-}
-
-.stage-line:last-child {
-    border-bottom: 0;
-}
-
-.stage-no {
-    font: 11px 'DM Mono';
-    color: var(--blue);
-    width: 24px;
-}
-
-.stage-copy {
-    flex: 1;
-}
-
-.stage-copy b {
-    font-size: 12px;
-    color: var(--ink);
-}
-
-.stage-copy small {
-    display: block;
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 3px;
-}
-
-.stage-state {
-    font: 9px 'DM Mono';
-    letter-spacing: .08em;
-    padding: 5px 7px;
-    border: 1px solid var(--rule);
-    color: var(--muted);
-}
-
-.stage-state.ok {
-    color: var(--green);
-    background: var(--green-soft);
-    border-color: #b5d1bd;
-}
-
-.logbox {
-    background: #18262d;
-    color: #e1e9e5;
-    padding: 16px;
-    border: 1px solid #34454b;
-    font: 11px 'DM Mono';
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    max-height: 560px;
-    overflow: auto;
-}
-
-.note {
-    background: var(--yellow-soft);
-    border-left: 3px solid #c18a2d;
-    padding: 12px 14px;
-    font-size: 11px;
-    color: #6d531f;
-    line-height: 1.6;
-    margin: 12px 0;
-}
-
-.stButton > button {
-    background: var(--blue) !important;
-    color: white !important;
-    border: 1px solid var(--blue) !important;
-    border-radius: 3px !important;
-    font-weight: 700 !important;
-    min-height: 44px;
-}
-
-.stButton > button:hover {
-    background: #1745b7 !important;
-    border-color: #1745b7 !important;
-}
-
-.stDownloadButton > button {
-    background: #e8ecf8 !important;
-    color: #203d91 !important;
-    border: 1px solid #bdc9e8 !important;
-    border-radius: 3px !important;
-    font-weight: 700 !important;
-}
-
-.stTextInput input,
-.stSelectbox div[data-baseweb="select"] {
-    background: var(--surface) !important;
-}
-
-div[data-testid="stExpander"] {
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-}
-
-div[data-testid="stAlert"] {
-    border-radius: 2px;
-}
-
-.footer {
-    border-top: 2px solid var(--ink);
-    margin-top: 38px;
-    padding-top: 12px;
-    display: flex;
-    justify-content: space-between;
-    color: #68767a;
-    font: 9px 'DM Mono';
-    letter-spacing: .1em;
-}
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+:root{--ink:#101310;--paper:#e9e8df;--paper2:#f2f1e9;--panel:#191e19;--panel2:#222920;--line:#41483c;--muted:#a7ad9d;--acid:#d4ff45;--orange:#ff7657;--blue:#91b9c8;--green:#9ee0a2}
+html,body,[class*="css"]{font-family:'Manrope',sans-serif}.stApp{background:var(--ink);color:var(--paper)}
+[data-testid="stHeader"]{background:rgba(16,19,16,.96)}.block-container{max-width:1500px;padding:1.1rem 2.2rem 3rem}
+h1,h2,h3,h4{color:var(--paper)!important;letter-spacing:-.045em}p,li,label{color:#c5c9bd}
+[data-testid="stCaptionContainer"]{color:var(--muted)!important}hr{border-color:var(--line)!important}
+code,pre{font-family:'DM Mono',monospace!important}
+/* Masthead */
+.mast{display:flex;justify-content:space-between;align-items:center;padding:5px 0 17px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.wordmark{font:800 30px 'Space Grotesk';letter-spacing:.13em;color:var(--acid);line-height:1.05;text-shadow:0 0 22px rgba(212,255,69,.16)}
+.wordsub{font:9px 'DM Mono';letter-spacing:.18em;color:var(--muted);margin-top:4px}
+.mast-right{font:10px 'DM Mono';letter-spacing:.12em;color:var(--muted);text-align:right}.live{color:var(--acid)}
+/* Navigation is a slim case index, not a sidebar */
+.case-nav{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:26px}
+.case-nav [data-testid="stRadio"]>div{gap:5px;flex-wrap:wrap}
+.case-nav [data-testid="stRadio"] label{padding:7px 13px;border:1px solid transparent;border-radius:2px;color:#aeb5a7!important;font:10px 'DM Mono';letter-spacing:.1em}
+.case-nav [data-testid="stRadio"] label:has(input:checked){background:var(--acid);border-color:var(--acid);color:var(--ink)!important}
+.case-nav [data-testid="stRadio"] label:has(input:checked) p{color:var(--ink)!important}
+.case-nav [data-testid="stRadio"] input{display:none}
+/* Editorial canvas */
+.kicker{font:10px 'DM Mono';letter-spacing:.2em;color:var(--acid);text-transform:uppercase}
+.display{font:600 clamp(38px,5vw,68px)/.98 'Space Grotesk';letter-spacing:-.075em;color:var(--paper);margin:12px 0}
+.display em{font-style:normal;color:var(--acid)}
+.lede{font-size:14px;line-height:1.8;color:#b5bbae;max-width:590px}
+.case-stamp{border:1px solid var(--line);padding:18px 20px;background:linear-gradient(145deg,#20271e,#151a15);height:100%}
+.stamp-label{font:9px 'DM Mono';letter-spacing:.16em;color:var(--muted)}.stamp-value{font:22px 'Space Grotesk';color:var(--acid);margin:7px 0 12px}
+.stamp-row{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:9px 0;font-size:11px;color:#c2c9b9}
+.stamp-row b{font:10px 'DM Mono';color:var(--paper);font-weight:500}
+/* Big horizontal readouts, not card tiles */
+.readout-band{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:28px 0 27px}
+.readout{padding:16px 18px 17px 0;border-right:1px solid var(--line);margin-right:18px}.readout:last-child{border:0;margin:0}
+.readout-label{font:9px 'DM Mono';letter-spacing:.16em;color:var(--muted)}.readout-value{font:38px 'Space Grotesk';letter-spacing:-.06em;color:var(--paper);margin:5px 0 0}.readout-note{font-size:10px;color:#929b8b}
+/* Findings as dossier rows */
+.sectionline{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:9px;margin:20px 0 10px}
+.sectionline h2{font:600 18px 'Space Grotesk';margin:0}.sectionline span{font:9px 'DM Mono';letter-spacing:.14em;color:var(--muted)}
+.dossier{display:grid;grid-template-columns:52px 1fr 115px;gap:14px;padding:18px 5px;border-bottom:1px solid #343b32;align-items:start}
+.dossier-num{font:18px 'Space Grotesk';color:#707a69}.dossier-title{font:600 16px 'Space Grotesk';color:var(--paper)}
+.dossier-meta{font:9px 'DM Mono';letter-spacing:.12em;color:var(--muted);margin:5px 0 8px}.dossier-copy{font-size:11px;line-height:1.65;color:#b3bbae}
+.severity{font:9px 'DM Mono';letter-spacing:.12em;padding:6px 8px;text-align:center;border:1px solid #7b453b;color:#ff947d;background:#2b1d18}
+.severity.medium{border-color:#80652d;color:#f0c46a;background:#2b2618}.severity.low{border-color:#526d4a;color:#b7d98a;background:#20291d}
+/* Panels and timelines */
+.dark-panel{background:var(--panel);border:1px solid var(--line);padding:18px 19px;margin-bottom:13px}
+.panel-kicker{font:9px 'DM Mono';letter-spacing:.16em;color:var(--acid)}.panel-title{font:600 17px 'Space Grotesk';margin:8px 0;color:var(--paper)}
+.panel-copy{font-size:11px;line-height:1.7;color:#aeb7a7}
+.timeline{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);margin-top:22px;padding-top:15px;gap:12px}
+.timeitem{border-left:2px solid #59614c;padding-left:11px}.timeitem.done{border-color:var(--acid)}
+.time-num{font:9px 'DM Mono';color:var(--acid)}.time-title{font:600 11px 'Space Grotesk';margin-top:5px}.time-desc{font-size:10px;color:var(--muted);margin-top:3px}
+.log{background:#0a0d0a;border:1px solid #3b4437;padding:15px;color:#cbd4c2;font:10px 'DM Mono';white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto}
+/* Controls */
+.stButton>button{background:var(--acid)!important;color:var(--ink)!important;border:1px solid var(--acid)!important;border-radius:2px!important;font:700 11px 'DM Mono'!important;letter-spacing:.08em!important;min-height:44px}
+.stButton>button:hover{background:#e2ff7b!important;border-color:#e2ff7b!important}
+.stDownloadButton>button{background:transparent!important;color:var(--paper)!important;border:1px solid #68715d!important;border-radius:2px!important;font:10px 'DM Mono'!important}
+.stDownloadButton>button:hover{border-color:var(--acid)!important;color:var(--acid)!important}
+.stSelectbox div[data-baseweb="select"],.stTextInput input{background:#1a2019!important;color:var(--paper)!important}
+div[data-testid="stExpander"]{background:#191e19;border:1px solid var(--line);border-radius:2px}
+div[data-testid="stAlert"]{border-radius:2px}.stTabs [data-baseweb="tab"]{color:#b4bcae}.stTabs [aria-selected="true"]{color:var(--acid)!important}
+.footer{border-top:1px solid var(--line);margin-top:34px;padding-top:12px;display:flex;justify-content:space-between;font:9px 'DM Mono';letter-spacing:.12em;color:#788171}
+@media(max-width:900px){.readout-band{grid-template-columns:repeat(2,1fr)}.dossier{grid-template-columns:35px 1fr}.dossier>div:last-child{grid-column:2}}
 </style>
 """, unsafe_allow_html=True)
 
-
-# ============================================================
-# BACKEND OPERATIONS
-# ============================================================
-
+# ------------------------------- operations ----------------------------------
 def read_report():
     if not REPORT.exists():
         return None
-
     try:
         return json.loads(REPORT.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -474,948 +98,305 @@ def read_report():
 
 
 def run_pipeline():
-    stages = []
-    findings = []
-    result = None
-
+    stages, findings, result = [], [], None
     try:
-        with st.spinner("01 / Inspecting the demonstration source..."):
+        with st.spinner("01 / Analysing source with targeted AST rules…"):
             findings = scan_application(TARGET)
+        stages.append(("SOURCE ANALYSIS", True, f"{len(findings)} supported finding(s)"))
 
-        stages.append((
-            "SOURCE ANALYSIS",
-            True,
-            f"{len(findings)} supported finding(s)"
-        ))
-
-        with st.spinner("02 / Building remediation artefacts..."):
+        with st.spinner("02 / Generating patched copy and unified diff…"):
             generate_patches()
-
         patch_ok = PATCHED.exists() and DIFF.exists()
-
-        stages.append((
-            "PATCH GENERATION",
-            patch_ok,
-            "Patched copy and unified diff checked"
-        ))
-
+        stages.append(("PATCH GENERATION", patch_ok, "Patched copy and diff checked"))
         if not patch_ok:
-            raise RuntimeError(
-                "Patch engine did not create both expected artefacts."
-            )
+            raise RuntimeError("Patch engine did not create both expected artefacts.")
 
-        with st.spinner("03 / Running the complete pytest suite..."):
-            result = subprocess.run(
-                [sys.executable, "-m", "pytest", "-v"],
-                cwd=ROOT,
-                capture_output=True,
-                text=True,
-                timeout=180
-            )
-
+        with st.spinner("03 / Running the complete pytest suite…"):
+            result = subprocess.run([sys.executable, "-m", "pytest", "-v"], cwd=ROOT,
+                                    capture_output=True, text=True, timeout=180)
         tests_ok = result.returncode == 0
-
-        stages.append((
-            "REGRESSION VALIDATION",
-            tests_ok,
-            f"pytest exit code {result.returncode}"
-        ))
+        stages.append(("REGRESSION VALIDATION", tests_ok, f"pytest exit code {result.returncode}"))
 
         if tests_ok:
-            with st.spinner("04 / Refreshing the security report..."):
+            with st.spinner("04 / Refreshing the security assessment…"):
                 generate_report()
-
-            stages.append((
-                "REPORT GENERATION",
-                REPORT.exists(),
-                "JSON assessment refreshed"
-            ))
+            stages.append(("REPORT GENERATION", REPORT.exists(), "Assessment JSON refreshed"))
         else:
-            stages.append((
-                "REPORT GENERATION",
-                False,
-                "Skipped because tests failed"
-            ))
+            stages.append(("REPORT GENERATION", False, "Skipped because tests failed"))
 
         st.session_state.findings = findings
         st.session_state.test_result = result
         st.session_state.stages = stages
         st.session_state.complete = True
-        st.session_state.last_run = datetime.now().strftime(
-            "%d %b %Y · %H:%M:%S"
-        )
+        st.session_state.last_run = datetime.now().strftime("%d %b %Y · %H:%M:%S")
         st.session_state.error = None
-
     except Exception as exc:
         st.session_state.stages = stages
         st.session_state.error = f"{type(exc).__name__}: {exc}"
         st.session_state.complete = True
-
     st.rerun()
 
 
-# ============================================================
-# REUSABLE UI COMPONENTS
-# ============================================================
-
-def stat(label, value, note):
-    st.markdown(
-        f'<div class="stat-block">'
-        f'<div class="stat-label">{html.escape(str(label))}</div>'
-        f'<div class="big-number">{html.escape(str(value))}</div>'
-        f'<div class="stat-note">{html.escape(str(note))}</div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
+def readout(label, value, note):
+    return (f'<div class="readout"><div class="readout-label">{html.escape(str(label))}</div>'
+            f'<div class="readout-value">{html.escape(str(value))}</div>'
+            f'<div class="readout-note">{html.escape(str(note))}</div></div>')
 
 
-def finding_card(item, number):
+def finding_row(item, idx):
     title = str(item.get("type", "Finding"))
     severity = str(item.get("severity", "Unknown"))
-    evidence = str(item.get("evidence", "No evidence supplied"))
+    evidence = str(item.get("evidence", "No evidence supplied."))
     file_path = str(item.get("file", "Unknown"))
     line = str(item.get("line", "—"))
-
     if "SQL Injection" in title:
         cwe = "CWE-89"
-        impact = (
-            "Untrusted input may alter query logic and expose "
-            "or modify records."
-        )
-        fix = (
-            "Use parameterized SQL instead of interpolating "
-            "input into the query string."
-        )
+        impact = "Untrusted input may alter query logic and expose or modify records."
+        fix = "Replace SQL string interpolation with parameterized query execution."
     else:
         cwe = "CWE-639"
-        impact = (
-            "A requester may access an object belonging "
-            "to another account."
-        )
-        fix = (
-            "Bind the resource lookup to authenticated "
-            "server-side identity and enforce ownership."
-        )
-
+        impact = "A requester may access an object belonging to another account."
+        fix = "Bind the resource lookup to authenticated server-side identity and enforce ownership."
+    sev_class = severity.lower() if severity.lower() in {"medium", "low"} else "high"
     st.markdown(
-        f'<div class="finding-card">'
-        f'<div style="display:flex;justify-content:space-between;gap:12px">'
-        f'<h3>{number:02d} / {html.escape(title)}</h3>'
-        f'<span class="tag">{html.escape(severity.upper())}</span>'
-        f'</div>'
-        f'<div class="finding-meta">{cwe} &nbsp;·&nbsp; SOURCE LINE '
-        f'{html.escape(line)}</div>'
-        f'<p><b>Observed evidence:</b> {html.escape(evidence)}</p>'
-        f'<p><b>Potential impact:</b> {html.escape(impact)}</p>'
-        f'<p><b>Remediation direction:</b> {html.escape(fix)}</p>'
-        f'<p style="color:#78868a"><b>File:</b> '
-        f'{html.escape(file_path)}</p>'
-        f'</div>',
-        unsafe_allow_html=True
+        f'<div class="dossier"><div class="dossier-num">{idx:02d}</div><div>'
+        f'<div class="dossier-title">{html.escape(title)}</div>'
+        f'<div class="dossier-meta">{cwe} &nbsp; / &nbsp; {html.escape(file_path)} &nbsp; / &nbsp; LINE {html.escape(line)}</div>'
+        f'<div class="dossier-copy"><b>Evidence</b> — {html.escape(evidence)}<br>'
+        f'<b>Impact</b> — {html.escape(impact)}<br><b>Remediation</b> — {html.escape(fix)}</div>'
+        f'</div><div class="severity {sev_class}">{html.escape(severity.upper())}</div></div>',
+        unsafe_allow_html=True,
     )
 
-
-# ============================================================
-# SESSION STATE
-# ============================================================
-
-defaults = {
-    "findings": [],
-    "test_result": None,
-    "stages": [],
-    "complete": False,
-    "last_run": None,
-    "error": None,
-}
-
-for key, default in defaults.items():
+# ------------------------------ session state --------------------------------
+for key, default in {
+    "findings": [], "test_result": None, "stages": [], "complete": False,
+    "last_run": None, "error": None,
+}.items():
     if key not in st.session_state:
         st.session_state[key] = default
 
-
 findings = st.session_state.findings
 test_result = st.session_state.test_result
-
-tests_pass = (
-    test_result is not None
-    and test_result.returncode == 0
-)
-
-patch_ready = PATCHED.exists() and DIFF.exists()
-
 report = read_report()
+patch_ready = PATCHED.exists() and DIFF.exists()
+tests_pass = test_result is not None and test_result.returncode == 0
 
-
-# ============================================================
-# NAVIGATION
-# ============================================================
-
-with st.sidebar:
-
-    st.markdown(
-        '<div style="padding:12px 2px 20px">'
-        '<div style="font:10px DM Mono;letter-spacing:.2em;color:#9db6ba">'
-        'SECURITY TOOL / 001</div>'
-        '<div style="font-size:25px;font-weight:800;letter-spacing:.08em;margin-top:7px">'
-        'PATCH<span style="color:#8fb4ff">PROOF</span></div>'
-        '<div style="font:10px DM Mono;color:#aab9b7;margin-top:5px">'
-        'APPLICATION SECURITY WORKBENCH</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown("---")
-
-    page = st.radio(
-        "WORKSPACE",
-        [
-            "Overview",
-            "Threat register",
-            "Patch workshop",
-            "Verification",
-            "Evidence",
-            "System notes"
-        ],
-        label_visibility="visible",
-        key="workspace_navigation"
-    )
-
-    st.markdown("---")
-
-    st.markdown(
-        '<div style="font:10px DM Mono;letter-spacing:.12em;color:#9db6ba">'
-        'TARGET PROFILE</div>',
-        unsafe_allow_html=True
-    )
-
-    st.caption("vulnerable_app / app.py")
-    st.caption("Synthetic SQLite records")
-    st.caption("Local fixture only")
-
-    st.markdown("---")
-
-    st.markdown(
-        '<div style="font:10px DM Mono;color:#9db6ba;line-height:1.8">'
-        'PATCHPROOF IS A TARGETED DEMONSTRATION.<br>'
-        'NOT A GENERAL-PURPOSE SCANNER.'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-
-# ============================================================
-# HEADER
-# ============================================================
-
+# -------------------------------- masthead ------------------------------------
 st.markdown(
-    '<div class="masthead">'
-    '<div>'
-    '<div class="wordmark">PATCH<span>PROOF</span></div>'
-    '<div class="mast-sub">'
-    'APPLICATION SECURITY / INCIDENT RESPONSE WORKSPACE'
-    '</div>'
-    '</div>'
-    '<div class="top-state">'
-    '● WORKSPACE AVAILABLE<br>'
-    '<span style="color:#68767a">'
-    'LOCAL FIXTURE · SYNTHETIC DATA'
-    '</span>'
-    '</div>'
-    '</div>',
-    unsafe_allow_html=True
+    '<div class="mast"><div><div class="wordmark">PATCHPROOF</div>'
+    '<div class="wordsub">APPLICATION SECURITY / INVESTIGATION FILE</div></div>'
+    '<div class="mast-right"><span class="live">● SYSTEM READY</span><br>LOCAL FIXTURE &nbsp;·&nbsp; SYNTHETIC DATA</div></div>',
+    unsafe_allow_html=True,
 )
+
+pages = ["Case File", "Findings", "Patch Review", "Verification", "Evidence", "Scope"]
+labels = ["00 / CASE FILE", "01 / FINDINGS", "02 / PATCH REVIEW", "03 / VERIFICATION", "04 / EVIDENCE", "05 / SCOPE"]
+st.markdown('<div class="case-nav">', unsafe_allow_html=True)
+page = st.radio("Investigation index", pages, horizontal=True,
+                format_func=lambda x: labels[pages.index(x)],
+                label_visibility="collapsed", key="case_navigation")
+st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state.error:
-    st.error("Pipeline error: " + st.session_state.error)
+    st.error("Pipeline stopped: " + st.session_state.error)
 
-
-# ============================================================
-# 00 — OVERVIEW
-# ============================================================
-
-if page == "Overview":
-
-    st.markdown(
-        '<div class="title-row">'
-        '<div>'
-        '<div class="eyebrow">WORKSPACE / 00 — SITUATION REPORT</div>'
-        '<div class="page-title">Security, in context.</div>'
-        '<div class="page-intro">'
-        'A focused assessment of the supplied Flask demonstration app. '
-        'Inspect the source, produce a remediation, verify the result '
-        'and retain the evidence.'
-        '</div>'
-        '</div>'
-        '<div class="stamp">PATCHPROOF / DEMO TARGET</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    left, right = st.columns([1.35, 1], gap="large")
-
-    with left:
-
-        st.markdown(
-            '<div class="panel-dark">'
-            '<div class="panel-kicker">01 / Start an assessment</div>'
-            '<h2 style="font-size:29px;line-height:1.12;margin:12px 0">'
-            'Find the flaw.<br>Verify the fix.</h2>'
-            '<p style="font-size:12px;line-height:1.7">'
-            'The pipeline runs the project scanner, creates a patched '
-            'copy and unified diff, executes pytest, then refreshes '
-            'the JSON assessment.</p>'
-            '<div style="font:10px DM Mono;color:#9db6ba;margin-top:17px">'
-            'SCOPE: SQL INJECTION · IDOR</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        if st.button(
-            "RUN SECURITY ASSESSMENT  →",
-            use_container_width=True,
-            key="run_main"
-        ):
+# -------------------------------- case file -----------------------------------
+if page == "Case File":
+    hero_left, hero_right = st.columns([1.55, 1], gap="large")
+    with hero_left:
+        st.markdown('<div class="kicker">SECURITY INVESTIGATION &nbsp; / &nbsp; FILE PP-001</div>'
+                    '<div class="display">Find the flaw.<br><em>Prove the fix.</em></div>'
+                    '<div class="lede">A controlled assessment of a deliberately vulnerable Flask application. '
+                    'PATCHPROOF traces selected weaknesses from source evidence to generated remediation, '
+                    'then checks the patched copy against the regression suite.</div>', unsafe_allow_html=True)
+        st.markdown('<div style="margin-top:18px;font:9px DM Mono;letter-spacing:.13em;color:#9ca594">'
+                    'TARGET &nbsp; vulnerable_app/app.py &nbsp;&nbsp; / &nbsp;&nbsp; SCOPE &nbsp; SQL INJECTION + IDOR</div>',
+                    unsafe_allow_html=True)
+        if st.button("RUN THE INVESTIGATION  ↗", use_container_width=True, key="run_case"):
             run_pipeline()
+        st.caption("Executes the actual scanner → patch generator → pytest → report pipeline.")
+    with hero_right:
+        st.markdown('<div class="case-stamp"><div class="stamp-label">CASE STATUS</div>'
+                    f'<div class="stamp-value">{"ASSESSED" if st.session_state.complete else "AWAITING RUN"}</div>'
+                    f'<div class="stamp-row"><span>Last execution</span><b>{html.escape(st.session_state.last_run or "—")}</b></div>'
+                    f'<div class="stamp-row"><span>Findings returned</span><b>{len(findings) if st.session_state.complete else "—"}</b></div>'
+                    f'<div class="stamp-row"><span>Patch artefacts</span><b>{"READY" if patch_ready else "PENDING"}</b></div>'
+                    f'<div class="stamp-row"><span>Regression suite</span><b>{"PASS" if tests_pass else ("FAIL" if test_result else "PENDING")}</b></div>'
+                    '<div style="margin-top:16px;font:9px DM Mono;letter-spacing:.13em;color:#9ca594">'
+                    'CONTROLLED LOCAL FIXTURE<br>NO EXTERNAL TARGETS</div></div>', unsafe_allow_html=True)
 
-        st.caption(
-            "This executes the actual project modules and test suite."
-        )
+    high = sum(1 for x in findings if str(x.get("severity", "")).lower() == "high")
+    low = sum(1 for x in findings if str(x.get("severity", "")).lower() == "low")
+    st.markdown('<div class="readout-band">' +
+        readout("TOTAL FINDINGS", len(findings) if st.session_state.complete else "—", "Latest source analysis") +
+        readout("HIGH SEVERITY", high if st.session_state.complete else "—", "Triage priority") +
+        readout("PATCH OUTPUT", "READY" if patch_ready else "—", "Patched copy + unified diff") +
+        readout("TEST RESULT", "PASS" if tests_pass else ("FAIL" if test_result else "—"), "Complete pytest run") +
+        '</div>', unsafe_allow_html=True)
 
+    left, right = st.columns([1.5, 1], gap="large")
+    with left:
+        st.markdown('<div class="sectionline"><h2>Evidence register</h2><span>LIVE FINDINGS / 01</span></div>', unsafe_allow_html=True)
+        if findings:
+            for i, item in enumerate(findings[:3], 1):
+                finding_row(item, i)
+            if len(findings) > 3:
+                st.caption(f"{len(findings) - 3} additional finding(s) are listed in the Findings register.")
+        elif st.session_state.complete:
+            st.success("The scanner returned no supported findings for this run.")
+        else:
+            st.markdown('<div class="panel-copy">No findings have been loaded into this session. '
+                        'Run the investigation to populate the evidence register from the AST scanner.</div>',
+                        unsafe_allow_html=True)
     with right:
+        st.markdown('<div class="dark-panel"><div class="panel-kicker">PIPELINE / 4 STAGES</div>'
+                    '<div class="panel-title">From source to proof.</div>'
+                    '<div class="panel-copy">Every stage is backed by a real project component. '
+                    'A failed test prevents the report from being refreshed.</div>', unsafe_allow_html=True)
+        stage_defs = [("01", "Source analysis", "Targeted AST scan", bool(st.session_state.complete and st.session_state.findings is not None)),
+                      ("02", "Patch generation", "Patched copy + diff", patch_ready),
+                      ("03", "Regression tests", "Full pytest suite", tests_pass),
+                      ("04", "Evidence report", "JSON assessment", REPORT.exists())]
+        for num, title, desc, ok in stage_defs:
+            st.markdown(f'<div class="stage"><div class="stageicon">{num}</div><div><div class="stagetitle">{title}</div>'
+                        f'<div class="stagedesc">{desc}</div></div><span class="status {"ok" if ok else "wait"}">'
+                        f'{"COMPLETE" if ok else "PENDING"}</span></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown(
-            '<div class="panel">'
-            '<div class="eyebrow">CURRENT SESSION</div>'
-            f'<div style="font-size:24px;font-weight:800;margin:9px 0">'
-            f'{"ASSESSMENT COMPLETE" if st.session_state.complete else "AWAITING RUN"}'
-            '</div>'
-            f'<div class="stat-note">Last execution · '
-            f'{html.escape(st.session_state.last_run or "Not run in this session")}'
-            '</div>'
-            '<hr>'
-            '<div class="eyebrow">SOURCE UNDER REVIEW</div>'
-            '<div style="font:12px DM Mono;margin:8px 0 17px">'
-            'vulnerable_app/app.py</div>'
-            '<div class="eyebrow">EXECUTION BOUNDARY</div>'
-            '<div style="font-size:12px;margin-top:8px">'
-            'Local fixture · synthetic records · no external target'
-            '</div></div>',
-            unsafe_allow_html=True
-        )
-
-    st.markdown(
-        '<div class="eyebrow" style="margin:26px 0 10px">'
-        'ASSESSMENT SNAPSHOT</div>',
-        unsafe_allow_html=True
-    )
-
-    high_count = sum(
-        1 for item in findings
-        if str(item.get("severity", "")).lower() == "high"
-    )
-
-    cols = st.columns(4, gap="small")
-
-    with cols[0]:
-        stat(
-            "Detected findings",
-            len(findings) if st.session_state.complete else "—",
-            "Latest in-session scan"
-        )
-
-    with cols[1]:
-        stat(
-            "High severity",
-            high_count if st.session_state.complete else "—",
-            "Triage priority"
-        )
-
-    with cols[2]:
-        stat(
-            "Patch artefacts",
-            "READY" if patch_ready else "—",
-            "Patched copy + diff"
-        )
-
-    with cols[3]:
-        stat(
-            "Test result",
-            "PASS" if tests_pass else (
-                "FAIL" if test_result else "—"
-            ),
-            "Latest pytest run"
-        )
-
-    st.markdown(
-        '<div class="eyebrow" style="margin:27px 0 8px">'
-        'WORKFLOW CHECKPOINTS</div>',
-        unsafe_allow_html=True
-    )
-
-    checkpoints = [
-        (
-            "01",
-            "Source inspection",
-            "Targeted Python AST rules",
-            bool(st.session_state.complete)
-        ),
-        (
-            "02",
-            "Remediation build",
-            "Patched copy and unified diff",
-            patch_ready
-        ),
-        (
-            "03",
-            "Regression verification",
-            "Full project pytest suite",
-            tests_pass
-        ),
-        (
-            "04",
-            "Evidence generation",
-            "Machine-readable JSON report",
-            REPORT.exists()
-        ),
-    ]
-
-    for number, title, desc, ready in checkpoints:
-
-        st.markdown(
-            f'<div class="stage-line">'
-            f'<div class="stage-no">{number}</div>'
-            f'<div class="stage-copy">'
-            f'<b>{html.escape(title)}</b>'
-            f'<small>{html.escape(desc)}</small>'
-            f'</div>'
-            f'<div class="stage-state {"ok" if ready else ""}">'
-            f'{"COMPLETE" if ready else "PENDING"}'
-            f'</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-
-    if findings:
-
-        st.markdown(
-            '<div class="eyebrow" style="margin:27px 0 8px">'
-            'LATEST OBSERVATIONS</div>',
-            unsafe_allow_html=True
-        )
-
-        for i, item in enumerate(findings, 1):
-            finding_card(item, i)
+    st.markdown('<div class="sectionline"><h2>Investigation sequence</h2><span>DETECT → PATCH → VERIFY → RECORD</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="timeline">'
+        '<div class="timeitem done"><div class="time-num">01 / DETECT</div><div class="time-title">Inspect source</div><div class="time-desc">AST-based pattern checks</div></div>'
+        '<div class="timeitem done"><div class="time-num">02 / PATCH</div><div class="time-title">Generate changes</div><div class="time-desc">Separate patched copy + diff</div></div>'
+        '<div class="timeitem done"><div class="time-num">03 / VERIFY</div><div class="time-title">Run regression suite</div><div class="time-desc">Security and functionality tests</div></div>'
+        '<div class="timeitem"><div class="time-num">04 / RECORD</div><div class="time-title">Export evidence</div><div class="time-desc">Machine-readable JSON report</div></div></div>', unsafe_allow_html=True)
 
     if st.session_state.stages:
-
-        with st.expander("View pipeline stage details"):
-
+        with st.expander("Execution record — inspect stage outcomes"):
             for name, ok, detail in st.session_state.stages:
-                st.write(
-                    ("✓ " if ok else "✕ ")
-                    + name
-                    + " — "
-                    + detail
-                )
+                st.write(("✓ " if ok else "✕ ") + name + " — " + detail)
 
-
-# ============================================================
-# 01 — THREAT REGISTER
-# ============================================================
-
-elif page == "Threat register":
-
-    st.markdown(
-        '<div class="title-row">'
-        '<div>'
-        '<div class="eyebrow">WORKSPACE / 01 — SOURCE INTELLIGENCE</div>'
-        '<div class="page-title">Threat register</div>'
-        '<div class="page-intro">'
-        'A record of the supported vulnerability patterns '
-        'detected in the latest scan.'
-        '</div>'
-        '</div>'
-        '<div class="stamp">AST RULESET / 2 PATTERNS</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
+# -------------------------------- findings ------------------------------------
+elif page == "Findings":
+    st.markdown('<div class="kicker">01 / SOURCE INTELLIGENCE</div><div class="display">The <em>findings</em><br>register.</div>'
+                '<div class="lede">Evidence-backed results returned by the targeted static-analysis rules. '
+                'Each record includes source location, impact and a recommended remediation.</div>', unsafe_allow_html=True)
     if findings:
-
-        selected = st.selectbox(
-            "Filter by severity",
-            ["All severities", "High", "Medium", "Low"]
-        )
-
-        visible = [
-            item for item in findings
-            if selected == "All severities"
-            or str(item.get("severity", "")).lower()
-            == selected.lower()
-        ]
-
-        x, y, z = st.columns(3)
-
-        with x:
-            stat("Total observations", len(findings), "Latest scan")
-
-        with y:
-            stat("Shown in register", len(visible), "Active filter")
-
-        with z:
-            stat("Rules supported", "02", "SQL injection / IDOR")
-
-        for i, item in enumerate(visible, 1):
-            finding_card(item, i)
-
+        selected = st.selectbox("FILTER BY SEVERITY", ["All", "High", "Medium", "Low"], label_visibility="collapsed")
+        shown = [x for x in findings if selected == "All" or str(x.get("severity", "")).lower() == selected.lower()]
+        st.markdown(f'<div class="sectionline"><h2>{len(shown)} records</h2><span>FILTER: {selected.upper()}</span></div>', unsafe_allow_html=True)
+        for i, item in enumerate(shown, 1):
+            finding_row(item, i)
     else:
+        st.info("No findings in this session. Run the investigation from the Case File page first.")
 
-        st.info(
-            "No scan results are stored in this session. "
-            "Run the assessment from Overview first."
-        )
-
-
-# ============================================================
-# 02 — PATCH WORKSHOP
-# ============================================================
-
-elif page == "Patch workshop":
-
-    st.markdown(
-        '<div class="title-row">'
-        '<div>'
-        '<div class="eyebrow">WORKSPACE / 02 — REMEDIATION REVIEW</div>'
-        '<div class="page-title">Patch workshop</div>'
-        '<div class="page-intro">'
-        'Inspect the generated changes. The original vulnerable '
-        'fixture remains available for comparison.'
-        '</div>'
-        '</div>'
-        '<div class="stamp">SOURCE → PATCHED COPY</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    if PATCHED.exists():
-
-        st.success("Generated patched application is available.")
-
-        if DIFF.exists():
-
-            diff_text = DIFF.read_text(encoding="utf-8")
-
-            st.markdown(
-                '<div class="panel">'
-                '<div class="eyebrow">CHANGE INTENT</div>'
-                '<p style="font-size:12px;line-height:1.8;margin:10px 0 0">'
-                '<b>SQL injection:</b> replace interpolated SQL with a parameterized query.<br>'
-                '<b>IDOR:</b> use authenticated session identity and constrain order ownership.'
-                '</p></div>',
-                unsafe_allow_html=True
-            )
-
-            st.markdown(
-                '<div class="eyebrow" style="margin:15px 0 8px">'
-                'UNIFIED PATCH / GENERATED DIFF</div>',
-                unsafe_allow_html=True
-            )
-
-            st.code(
-                diff_text,
-                language="diff",
-                line_numbers=True
-            )
-
-            st.download_button(
-                "Download patch diff",
-                diff_text,
-                "security_patch.diff",
-                "text/x-diff"
-            )
-
-        else:
-
-            st.warning(
-                "The patched copy exists, but the diff is missing. "
-                "Run the assessment again."
-            )
-
-        with st.expander("Inspect complete patched source"):
-
-            st.code(
-                PATCHED.read_text(encoding="utf-8"),
-                language="python",
-                line_numbers=True
-            )
-
-        st.download_button(
-            "Download patched Flask app",
-            PATCHED.read_bytes(),
-            "patched_app.py",
-            "text/x-python"
-        )
-
+# -------------------------------- patch review -------------------------------
+elif page == "Patch Review":
+    st.markdown('<div class="kicker">02 / REMEDIATION REVIEW</div><div class="display">Changes, not<br><em>claims.</em></div>'
+                '<div class="lede">Review the exact unified diff generated by the patch engine. Source code stays tucked away until deliberately opened.</div>',
+                unsafe_allow_html=True)
+    if PATCHED.exists() and DIFF.exists():
+        st.markdown('<div class="dark-panel"><div class="panel-kicker">PATCH ENGINE OUTPUT</div>'
+                    '<div class="panel-title">A separate patched application has been generated.</div>'
+                    '<div class="panel-copy">The original vulnerable fixture is retained. The patch is written to '
+                    '<b>vulnerable_app/patched_app.py</b>; the exact changes are recorded in the unified diff.</div></div>',
+                    unsafe_allow_html=True)
+        diff = DIFF.read_text(encoding="utf-8")
+        st.download_button("DOWNLOAD UNIFIED PATCH DIFF", diff, "security_patch.diff", "text/x-diff")
+        with st.expander("Inspect exact source diff"):
+            st.code(diff, language="diff", line_numbers=True)
+        with st.expander("Inspect complete patched application source"):
+            st.code(PATCHED.read_text(encoding="utf-8"), language="python", line_numbers=True)
+        st.download_button("DOWNLOAD PATCHED APP", PATCHED.read_bytes(), "patched_app.py", "text/x-python")
     else:
+        st.info("Patch artefacts are not available yet. Run the investigation to generate the patched copy and diff.")
 
-        st.info(
-            "No patched copy is available yet. "
-            "Run the assessment from Overview."
-        )
-
-
-# ============================================================
-# 03 — VERIFICATION
-# ============================================================
-
+# -------------------------------- verification -------------------------------
 elif page == "Verification":
-
-    st.markdown(
-        '<div class="title-row">'
-        '<div>'
-        '<div class="eyebrow">WORKSPACE / 03 — VALIDATION RECORD</div>'
-        '<div class="page-title">Verification bench</div>'
-        '<div class="page-intro">'
-        'The actual pytest output captured by the most recent '
-        'pipeline execution.'
-        '</div>'
-        '</div>'
-        '<div class="stamp">PYTEST / REGRESSION</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown('<div class="kicker">03 / REGRESSION VALIDATION</div><div class="display">Prove it<br><em>holds.</em></div>'
+                '<div class="lede">The validation view reports the actual pytest process result and captured transcript — not simulated pass indicators.</div>',
+                unsafe_allow_html=True)
     if test_result is not None:
-
         if tests_pass:
-            st.success(
-                "VALIDATION PASSED — pytest returned exit code 0."
-            )
+            st.success("VALIDATION PASSED — pytest returned exit code 0.")
         else:
-            st.error(
-                f"VALIDATION FAILED — pytest returned exit code "
-                f"{test_result.returncode}."
-            )
-
-        x, y, z = st.columns(3)
-
-        with x:
-            stat(
-                "Exit code",
-                test_result.returncode,
-                "Zero indicates success"
-            )
-
-        with y:
-            stat(
-                "Suite status",
-                "PASS" if tests_pass else "FAIL",
-                "Latest full run"
-            )
-
-        with z:
-            stat(
-                "Command",
-                "pytest -v",
-                "Project root"
-            )
-
-        transcript = (test_result.stdout or "") + (
-            ("\n" + test_result.stderr)
-            if test_result.stderr else ""
-        )
-
-        st.markdown(
-            '<div class="eyebrow" style="margin:22px 0 9px">'
-            'CAPTURED TEST TRANSCRIPT</div>',
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            '<div class="logbox">'
-            + html.escape(transcript or "No output captured.")
-            + '</div>',
-            unsafe_allow_html=True
-        )
-
-        st.download_button(
-            "Download test transcript",
-            transcript,
-            "pytest_validation.log",
-            "text/plain"
-        )
-
+            st.error(f"VALIDATION FAILED — pytest returned exit code {test_result.returncode}.")
+        a, b, c = st.columns(3)
+        a.metric("Exit code", test_result.returncode)
+        b.metric("Result", "PASS" if tests_pass else "FAIL")
+        c.metric("Command", "pytest -v")
+        output = (test_result.stdout or "") + (("\n" + test_result.stderr) if test_result.stderr else "")
+        st.markdown('<div class="sectionline"><h2>Execution transcript</h2><span>RAW PROCESS OUTPUT</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="log">' + html.escape(output or "No output captured.") + '</div>', unsafe_allow_html=True)
+        st.download_button("DOWNLOAD TEST TRANSCRIPT", output, "pytest_validation.log", "text/plain")
     else:
+        st.info("No pytest execution captured yet. Run the investigation first.")
+    st.markdown('<div class="sectionline"><h2>Demonstration test coverage</h2><span>PROJECT TEST INTENT</span></div>', unsafe_allow_html=True)
+    for label, source in [
+        ("SQL injection payload is neutralized by the patched app", "tests/test_patched_app.py"),
+        ("Normal user search still works", "tests/test_patched_app.py"),
+        ("Authenticated user can access their own order", "tests/test_patched_app.py"),
+        ("Cross-user order access is blocked", "tests/test_patched_app.py"),
+        ("Unauthenticated order access is blocked", "tests/test_patched_app.py"),
+        ("Original fixture demonstrates both weaknesses", "tests/test_sql_injection.py / tests/test_idor.py"),
+    ]:
+        st.markdown(f'<div class="stage"><div class="stageicon">↳</div><div><div class="stagetitle">{html.escape(label)}</div>'
+                    f'<div class="stagedesc">{html.escape(source)}</div></div></div>', unsafe_allow_html=True)
 
-        st.info(
-            "No test run has been captured in this session. "
-            "Run the assessment from Overview."
-        )
-
-    st.markdown("### Verification coverage")
-
-    coverage_items = [
-        (
-            "SQL injection payload is neutralized by the patched app",
-            "tests/test_patched_app.py"
-        ),
-        (
-            "Normal user search continues to work",
-            "tests/test_patched_app.py"
-        ),
-        (
-            "Authenticated user can access their own order",
-            "tests/test_patched_app.py"
-        ),
-        (
-            "Cross-user order access is blocked",
-            "tests/test_patched_app.py"
-        ),
-        (
-            "Unauthenticated order access is blocked",
-            "tests/test_patched_app.py"
-        ),
-        (
-            "Original fixture demonstrates both weaknesses",
-            "tests/test_sql_injection.py / tests/test_idor.py"
-        ),
-    ]
-
-    for label, source in coverage_items:
-
-        st.markdown(
-            f'<div class="rule-row">'
-            f'<div class="rule-number">✓</div>'
-            f'<div>'
-            f'<div class="rule-name">{html.escape(label)}</div>'
-            f'<div class="rule-desc">{html.escape(source)}</div>'
-            f'</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-
-
-# ============================================================
-# 04 — EVIDENCE
-# ============================================================
-
+# -------------------------------- evidence ------------------------------------
 elif page == "Evidence":
-
-    st.markdown(
-        '<div class="title-row">'
-        '<div>'
-        '<div class="eyebrow">WORKSPACE / 04 — AUDIT MATERIAL</div>'
-        '<div class="page-title">Evidence archive</div>'
-        '<div class="page-intro">'
-        'Generated artefacts from the most recent successful '
-        'pipeline stages.'
-        '</div>'
-        '</div>'
-        '<div class="stamp">REPORTS / EXPORTS</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown('<div class="kicker">04 / AUDIT TRAIL</div><div class="display">The evidence<br><em>locker.</em></div>'
+                '<div class="lede">Download the concrete files produced by the pipeline. Every artefact is read from disk and its availability is checked live.</div>',
+                unsafe_allow_html=True)
     report = read_report()
-
     if report:
-
         summary = report.get("summary", {})
         validation = report.get("validation", {})
-
-        x, y, z = st.columns(3)
-
-        with x:
-            stat(
-                "Reported findings",
-                summary.get("total_vulnerabilities", "—"),
-                "JSON assessment"
-            )
-
-        with y:
-            stat(
-                "High severity",
-                summary.get("high", "—"),
-                "JSON assessment"
-            )
-
-        with z:
-            stat(
-                "Validation",
-                validation.get("status", "—"),
-                "Recorded status"
-            )
-
+        a, b, c = st.columns(3)
+        a.metric("Findings", summary.get("total_vulnerabilities", "—"))
+        b.metric("High severity", summary.get("high", "—"))
+        c.metric("Validation", validation.get("status", "—"))
         report_text = json.dumps(report, indent=4)
-
-        st.download_button(
-            "Download security assessment",
-            report_text,
-            "security_report.json",
-            "application/json"
-        )
-
-        with st.expander("Inspect JSON assessment"):
+        st.download_button("DOWNLOAD SECURITY REPORT JSON", report_text, "security_report.json", "application/json")
+        with st.expander("Preview machine-readable assessment"):
             st.json(report)
-
     else:
+        st.info("No report is available yet. The report is generated after the regression suite passes.")
 
-        st.info(
-            "No JSON report is available. "
-            "Run the pipeline to generate one."
-        )
-
-    st.markdown("### Artefact inventory")
-
-    artefacts = [
-        (
-            "Security assessment",
-            REPORT,
-            "Machine-readable findings, severity and validation summary.",
-            "application/json"
-        ),
-        (
-            "Unified patch diff",
-            DIFF,
-            "Exact source changes produced by the patch engine.",
-            "text/x-diff"
-        ),
-        (
-            "Patched application",
-            PATCHED,
-            "Generated patched Flask application copy.",
-            "text/x-python"
-        ),
-    ]
-
-    for title, path, description, mime in artefacts:
-
-        available = path.exists()
-
-        st.markdown(
-            f'<div class="panel">'
-            f'<div style="display:flex;justify-content:space-between;gap:12px">'
-            f'<b>{html.escape(title)}</b>'
-            f'<span class="stage-state {"ok" if available else ""}">'
-            f'{"AVAILABLE" if available else "NOT GENERATED"}'
-            f'</span></div>'
-            f'<p style="font-size:11px;margin:8px 0">'
-            f'{html.escape(description)}</p>'
-            f'<div class="eyebrow">'
-            f'{html.escape(str(path.relative_to(ROOT)))}'
-            f'</div></div>',
-            unsafe_allow_html=True
-        )
-
+    st.markdown('<div class="sectionline"><h2>Artefact index</h2><span>FILESYSTEM CHECK</span></div>', unsafe_allow_html=True)
+    for title, path, description, mime in [
+        ("Security assessment", REPORT, "Machine-readable findings, severity and validation summary.", "application/json"),
+        ("Unified patch diff", DIFF, "Exact source changes produced by the patch engine.", "text/x-diff"),
+        ("Patched application", PATCHED, "Generated patched Flask application copy.", "text/x-python"),
+    ]:
+        available = path.exists() and path.is_file()
+        st.markdown(f'<div class="stage"><div class="stageicon">{ "✓" if available else "—" }</div><div>'
+                    f'<div class="stagetitle">{html.escape(title)}</div><div class="stagedesc">{html.escape(description)}<br>'
+                    f'{html.escape(str(path.relative_to(ROOT)))}</div></div><span class="status {"ok" if available else "wait"}">'
+                    f'{"AVAILABLE" if available else "NOT GENERATED"}</span></div>', unsafe_allow_html=True)
         if available:
+            st.download_button("DOWNLOAD " + path.name.upper(), path.read_bytes(), path.name, mime, key="evidence_" + path.name)
 
-            st.download_button(
-                f"Export {path.name}",
-                path.read_bytes(),
-                path.name,
-                mime,
-                key="export_" + path.name
-            )
-
-
-# ============================================================
-# 05 — SYSTEM NOTES
-# ============================================================
-
-elif page == "System notes":
-
-    st.markdown(
-        '<div class="title-row">'
-        '<div>'
-        '<div class="eyebrow">WORKSPACE / 05 — ENGINEERING NOTES</div>'
-        '<div class="page-title">System notes</div>'
-        '<div class="page-intro">'
-        'Architecture, supported detection patterns and the '
-        'boundaries of this prototype.'
-        '</div>'
-        '</div>'
-        '<div class="stamp">PROJECT SPECIFICATION</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="panel-dark">'
-        '<div class="panel-kicker">PROCESS MODEL</div>'
-        '<h2 style="font-size:25px;margin:10px 0">'
-        'Inspect → Remediate → Verify → Record</h2>'
-        '<p style="font-size:12px;line-height:1.7">'
-        'The Streamlit interface invokes a Python AST-based targeted '
-        'scanner, a patch generator, the project pytest suite and a '
-        'JSON report generator. The vulnerable Flask fixture uses '
-        'synthetic SQLite records.</p>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
+# -------------------------------- scope ---------------------------------------
+elif page == "Scope":
+    st.markdown('<div class="kicker">05 / SYSTEM BOUNDARIES</div><div class="display">Know what it<br><em>covers.</em></div>'
+                '<div class="lede">A credible security tool states its boundaries clearly. PATCHPROOF demonstrates a focused workflow against a controlled fixture.</div>',
+                unsafe_allow_html=True)
     left, right = st.columns(2, gap="large")
-
     with left:
-
-        st.markdown(
-            '<div class="panel">'
-            '<div class="eyebrow">TECHNOLOGY</div>'
-            '<h3>Project components</h3>'
-            '<p style="font-size:12px;line-height:1.9">'
-            'Python · Flask · SQLite<br>'
-            'Python AST · Streamlit<br>'
-            'pytest · difflib'
-            '</p></div>',
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            '<div class="panel">'
-            '<div class="eyebrow">DETECTION SCOPE</div>'
-            '<h3>Two supported patterns</h3>'
-            '<p style="font-size:12px;line-height:1.9">'
-            'SQL injection: targeted detection of f-string SQL '
-            'passed to execute().<br><br>'
-            'IDOR: targeted order-query ownership pattern in '
-            'the included fixture.'
-            '</p></div>',
-            unsafe_allow_html=True
-        )
-
+        st.markdown('<div class="dark-panel"><div class="panel-kicker">DETECTION SCOPE</div><div class="panel-title">Two targeted vulnerability patterns</div>'
+                    '<div class="panel-copy"><b>SQL Injection · CWE-89</b><br>Detects the supported f-string SQL construction pattern passed to execute().<br><br>'
+                    '<b>Broken Access Control / IDOR · CWE-639</b><br>Checks the demonstration order lookup for a missing ownership constraint.</div></div>',
+                    unsafe_allow_html=True)
+        st.markdown('<div class="dark-panel"><div class="panel-kicker">TECHNOLOGY</div><div class="panel-title">The implementation stack</div>'
+                    '<div class="panel-copy">Python · Flask · SQLite · Python AST · Streamlit · pytest · difflib</div></div>', unsafe_allow_html=True)
     with right:
+        st.markdown('<div class="dark-panel"><div class="panel-kicker">EXECUTION MODEL</div><div class="panel-title">Local and controlled</div>'
+                    '<div class="panel-copy">The vulnerable Flask application is a local fixture populated with synthetic SQLite records. '
+                    'The original file is retained; the patch engine creates a separate patched copy. No external target is scanned.</div></div>',
+                    unsafe_allow_html=True)
+        st.warning("Scope limitation: the scanner uses targeted static rules for the included fixture. It is not a general-purpose SAST engine, does not detect every vulnerability, and does not replace a professional security audit. The patched fixture is for local demonstration, not production deployment.")
 
-        st.markdown(
-            '<div class="panel">'
-            '<div class="eyebrow">BOUNDARIES</div>'
-            '<h3>What this demo does</h3>'
-            '<p style="font-size:12px;line-height:1.9">'
-            'Runs against a deliberately vulnerable local '
-            'demonstration app with synthetic records. '
-            'It does not scan external targets.'
-            '</p></div>',
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            '<div class="note">'
-            '<b>Important limitation</b><br>'
-            'The static rules are tailored to the supplied fixture. '
-            'Detecting IDOR in arbitrary applications requires deeper '
-            'data-flow and authorization-context analysis than this '
-            'prototype implements.'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-
-# ============================================================
-# FOOTER
-# ============================================================
-
-st.markdown(
-    '<div class="footer">'
-    '<span>PATCHPROOF / APPLICATION SECURITY WORKBENCH</span>'
-    '<span>INSPECT · REMEDIATE · VERIFY · RECORD</span>'
-    '</div>',
-    unsafe_allow_html=True
-)
+st.markdown('<div class="footer"><span>PATCH/PROOF &nbsp;·&nbsp; APPLICATION SECURITY PROTOTYPE</span>'
+            '<span>DETECT &nbsp; / &nbsp; PATCH &nbsp; / &nbsp; VERIFY &nbsp; / &nbsp; RECORD</span></div>',
+            unsafe_allow_html=True)

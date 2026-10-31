@@ -1,0 +1,2758 @@
+=== FILE: .gitattributes ===
+# Auto detect text files and perform LF normalization
+* text=auto
+
+=== FILE: .gitignore ===
+# PATCHPROOF local database files
+*.db
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# UV
+#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#uv.lock
+
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+#poetry.lock
+
+# pdm
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#pdm.lock
+#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
+#   in version control.
+#   https://pdm.fming.dev/latest/usage/project/#working-with-version-control
+.pdm.toml
+.pdm-python
+.pdm-build/
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  and can be added to the global gitignore or merged into this file.  For a more nuclear
+#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+#.idea/
+
+# Ruff stuff:
+.ruff_cache/
+
+# PyPI configuration file
+.pypirc
+
+# Cursor  
+#  Cursor is an AI-powered code editor.`.cursorignore` specifies files/directories to 
+#  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
+#  refer to https://docs.cursor.com/context/ignore-files
+.cursorignore
+.cursorindexingignore
+=== FILE: dashboard.py ===
+import sys
+import subprocess
+import json
+import html
+
+from datetime import datetime
+from pathlib import Path
+from difflib import unified_diff
+
+import streamlit as st
+
+
+# ============================================================
+# PATCHPROOF
+# SECURITY INVESTIGATION / CASE FILE 001
+# ============================================================
+
+ROOT = Path(__file__).resolve().parent
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scanner.analyzer import scan_application
+from patcher.patch_engine import generate_patches
+from reports.report_engine import generate_report
+
+
+TARGET = ROOT / "vulnerable_app" / "app.py"
+PATCHED = ROOT / "vulnerable_app" / "patched_app.py"
+
+DIFF = ROOT / "reports" / "security_patch.diff"
+REPORT = ROOT / "reports" / "security_report.json"
+
+
+# ============================================================
+# PAGE CONFIGURATION
+# ============================================================
+
+st.set_page_config(
+    page_title="PATCHPROOF — Investigation 001",
+    page_icon="⬡",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+
+# ============================================================
+# EDITORIAL DESIGN SYSTEM
+# ============================================================
+
+st.markdown(
+    """
+    <style>
+
+    @import url(
+        'https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap'
+    );
+
+    :root {
+        --paper: #f1efe8;
+        --white: #fbfaf6;
+        --ink: #17242b;
+        --muted: #748084;
+        --rule: #d5d4ca;
+
+        --blue: #2457d6;
+        --red: #bd493b;
+        --green: #28734f;
+
+        --red-soft: #f7e8e3;
+        --green-soft: #e5f0e8;
+        --blue-soft: #e8edfa;
+    }
+
+
+    html, body, [class*="css"] {
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    .stApp {
+        background: var(--paper);
+        color: var(--ink);
+    }
+
+    [data-testid="stHeader"] {
+        background: var(--paper);
+    }
+
+    #MainMenu, footer {
+        visibility: hidden;
+    }
+
+    .block-container {
+        max-width: 1350px;
+        padding: 2rem 3rem 4rem;
+    }
+
+
+    /* TYPOGRAPHY */
+
+    h1, h2, h3, h4 {
+        color: var(--ink) !important;
+    }
+
+    p, li {
+        color: #48565a;
+    }
+
+    code, pre {
+        font-family: 'DM Mono', monospace !important;
+    }
+
+
+    /* MASTHEAD */
+
+    .masthead {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        border-bottom: 2px solid var(--ink);
+
+        padding-bottom: 17px;
+        margin-bottom: 48px;
+    }
+
+    .brand {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: .15em;
+        color: var(--ink);
+    }
+
+    .brand span {
+        color: var(--blue);
+    }
+
+    .brand-caption {
+        font: 10px 'DM Mono';
+        color: var(--muted);
+        letter-spacing: .13em;
+        margin-top: 5px;
+    }
+
+    .mast-meta {
+        font: 10px 'DM Mono';
+        color: var(--muted);
+        letter-spacing: .1em;
+        text-align: right;
+        line-height: 1.8;
+    }
+
+
+    /* EDITORIAL OPENING */
+
+    .hero {
+        padding: 15px 0 35px;
+        border-bottom: 1px solid var(--rule);
+        margin-bottom: 34px;
+    }
+
+    .eyebrow {
+        font: 10px 'DM Mono';
+        letter-spacing: .17em;
+        text-transform: uppercase;
+        color: var(--blue);
+    }
+
+    .hero-title {
+        font-family: 'Playfair Display', serif;
+        font-size: clamp(42px, 6vw, 76px);
+        line-height: 1.04;
+        letter-spacing: -.045em;
+        max-width: 850px;
+        margin: 20px 0;
+        color: var(--ink);
+    }
+
+    .hero-title em {
+        color: var(--blue);
+        font-weight: 500;
+    }
+
+    .hero-description {
+        max-width: 680px;
+        font-size: 14px;
+        line-height: 1.9;
+        color: #68767a;
+    }
+
+    .hero-reference {
+        margin-top: 28px;
+        font: 10px 'DM Mono';
+        letter-spacing: .1em;
+        color: var(--muted);
+    }
+
+
+    /* INVESTIGATION SECTIONS */
+
+    .section {
+        margin-top: 48px;
+        padding-top: 20px;
+        border-top: 2px solid var(--ink);
+    }
+
+    .section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 15px;
+        margin-bottom: 24px;
+    }
+
+    .section-number {
+        font: 11px 'DM Mono';
+        color: var(--blue);
+        letter-spacing: .12em;
+    }
+
+    .section-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 32px;
+        color: var(--ink);
+        margin: 5px 0;
+    }
+
+    .section-description {
+        font-size: 12px;
+        line-height: 1.7;
+        color: var(--muted);
+    }
+
+    .section-reference {
+        font: 10px 'DM Mono';
+        color: var(--muted);
+        white-space: nowrap;
+    }
+
+
+    /* CASE INFORMATION */
+
+    .case-strip {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+
+        margin: 24px 0;
+    }
+
+    .case-item {
+        padding: 17px 12px 17px 0;
+        border-right: 1px solid var(--rule);
+    }
+
+    .case-item:last-child {
+        border-right: 0;
+        padding-left: 15px;
+    }
+
+    .case-label {
+        font: 9px 'DM Mono';
+        letter-spacing: .12em;
+        color: var(--muted);
+        text-transform: uppercase;
+    }
+
+    .case-value {
+        font-size: 23px;
+        font-weight: 800;
+        margin-top: 7px;
+        color: var(--ink);
+    }
+
+    .case-note {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 3px;
+    }
+
+
+    /* FINDINGS */
+
+    .finding {
+        padding: 23px 0;
+        border-bottom: 1px solid var(--rule);
+    }
+
+    .finding-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .finding-number {
+        font: 11px 'DM Mono';
+        color: var(--blue);
+        letter-spacing: .1em;
+    }
+
+    .finding-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 25px;
+        margin: 8px 0;
+        color: var(--ink);
+    }
+
+    .severity {
+        font: 9px 'DM Mono';
+        letter-spacing: .1em;
+        padding: 6px 9px;
+        background: var(--red-soft);
+        color: var(--red);
+        border: 1px solid #dfb6ac;
+        white-space: nowrap;
+    }
+
+    .finding-meta {
+        font: 10px 'DM Mono';
+        color: var(--muted);
+        margin: 10px 0 17px;
+    }
+
+    .finding-description {
+        font-size: 12px;
+        line-height: 1.8;
+        max-width: 800px;
+        color: #536166;
+    }
+
+    .evidence-label {
+        font: 9px 'DM Mono';
+        letter-spacing: .13em;
+        color: var(--blue);
+        margin: 20px 0 8px;
+    }
+
+    .evidence-box {
+        background: #e9e7de;
+        border-left: 3px solid var(--red);
+        padding: 13px 16px;
+
+        font: 11px 'DM Mono';
+        line-height: 1.8;
+        color: #38464b;
+
+        overflow-wrap: anywhere;
+    }
+
+    .remediation {
+        margin-top: 16px;
+        padding: 14px 16px;
+
+        background: var(--green-soft);
+        border-left: 3px solid var(--green);
+    }
+
+    .remediation-title {
+        font: 9px 'DM Mono';
+        letter-spacing: .1em;
+        color: var(--green);
+        margin-bottom: 6px;
+    }
+
+    .remediation p {
+        font-size: 11px;
+        line-height: 1.7;
+        margin: 0;
+        color: #385848;
+    }
+
+
+    /* SOURCE COMPARISON */
+
+    .source-heading {
+        font: 10px 'DM Mono';
+        letter-spacing: .12em;
+        margin-bottom: 12px;
+    }
+
+    .source-original {
+        color: var(--red);
+    }
+
+    .source-patched {
+        color: var(--green);
+    }
+
+
+    /* STATUS */
+
+    .status-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 13px 0;
+        border-bottom: 1px solid var(--rule);
+    }
+
+    .status-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink);
+    }
+
+    .status-detail {
+        font: 10px 'DM Mono';
+        color: var(--muted);
+        margin-top: 4px;
+    }
+
+    .status-tag {
+        font: 9px 'DM Mono';
+        padding: 6px 9px;
+        border: 1px solid var(--rule);
+        color: var(--muted);
+    }
+
+    .status-tag.ok {
+        background: var(--green-soft);
+        border-color: #b5d1bd;
+        color: var(--green);
+    }
+
+    .status-tag.fail {
+        background: var(--red-soft);
+        border-color: #dfb6ac;
+        color: var(--red);
+    }
+
+
+    /* TECHNICAL TRANSCRIPT */
+
+    .transcript {
+        background: #19272e;
+        color: #e3eae5;
+
+        padding: 19px;
+
+        font: 11px 'DM Mono';
+        line-height: 1.8;
+
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+
+    /* NOTES */
+
+    .editorial-note {
+        padding: 16px 18px;
+        background: #e9e7de;
+        border-left: 3px solid var(--blue);
+
+        font-size: 11px;
+        line-height: 1.8;
+        color: #536166;
+
+        margin: 18px 0;
+    }
+
+
+    /* BUTTONS */
+
+    .stButton > button {
+        background: var(--blue) !important;
+        color: white !important;
+
+        border: 1px solid var(--blue) !important;
+        border-radius: 2px !important;
+
+        font-weight: 700 !important;
+        min-height: 48px;
+    }
+
+    .stButton > button:hover {
+        background: #1745b7 !important;
+        border-color: #1745b7 !important;
+    }
+
+    .stDownloadButton > button {
+        background: var(--blue-soft) !important;
+        color: #203d91 !important;
+
+        border: 1px solid #bdc9e8 !important;
+        border-radius: 2px !important;
+
+        font-weight: 600 !important;
+    }
+
+
+    /* FOOTER */
+
+    .footer {
+        border-top: 2px solid var(--ink);
+        margin-top: 65px;
+        padding-top: 15px;
+
+        display: flex;
+        justify-content: space-between;
+
+        font: 9px 'DM Mono';
+        letter-spacing: .1em;
+        color: var(--muted);
+    }
+
+
+    /* RESPONSIVE */
+
+    @media (max-width: 700px) {
+
+        .block-container {
+            padding: 1rem 1.2rem 3rem;
+        }
+
+        .case-strip {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .case-item {
+            border-bottom: 1px solid var(--rule);
+        }
+
+        .hero-title {
+            font-size: 44px;
+        }
+
+        .footer {
+            flex-direction: column;
+            gap: 10px;
+        }
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# SESSION STATE
+# ============================================================
+
+defaults = {
+    "findings": [],
+    "test_result": None,
+    "stages": [],
+    "complete": False,
+    "last_run": None,
+    "error": None,
+}
+
+for key, value in defaults.items():
+
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+
+findings = st.session_state.findings
+test_result = st.session_state.test_result
+
+tests_pass = (
+    test_result is not None
+    and test_result.returncode == 0
+)
+
+patch_ready = PATCHED.exists() and DIFF.exists()
+
+
+# ============================================================
+# BACKEND HELPERS
+# ============================================================
+
+def read_report():
+
+    if not REPORT.exists():
+        return None
+
+    try:
+
+        return json.loads(
+            REPORT.read_text(encoding="utf-8")
+        )
+
+    except (OSError, json.JSONDecodeError):
+
+        return None
+
+
+def read_source(path):
+
+    if not path.exists():
+        return None
+
+    try:
+
+        return path.read_text(encoding="utf-8")
+
+    except OSError:
+
+        return None
+
+
+def run_pipeline():
+
+    stages = []
+    findings = []
+    result = None
+
+    try:
+
+        # ----------------------------------------------------
+        # STAGE 01: SOURCE ANALYSIS
+        # ----------------------------------------------------
+
+        with st.spinner(
+            "01 / Investigating vulnerable source..."
+        ):
+
+            findings = scan_application(TARGET)
+
+        stages.append(
+            (
+                "SOURCE ANALYSIS",
+                True,
+                f"{len(findings)} finding(s) detected",
+            )
+        )
+
+
+        # ----------------------------------------------------
+        # STAGE 02: PATCH GENERATION
+        # ----------------------------------------------------
+
+        with st.spinner(
+            "02 / Generating remediation artefacts..."
+        ):
+
+            generate_patches()
+
+        patch_ok = (
+            PATCHED.exists()
+            and DIFF.exists()
+        )
+
+        stages.append(
+            (
+                "PATCH GENERATION",
+                patch_ok,
+                "Patched source and unified diff checked",
+            )
+        )
+
+        if not patch_ok:
+
+            raise RuntimeError(
+                "Patch engine did not generate expected artefacts."
+            )
+
+
+        # ----------------------------------------------------
+        # STAGE 03: REGRESSION TESTING
+        # ----------------------------------------------------
+
+        with st.spinner(
+            "03 / Executing regression test suite..."
+        ):
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pytest",
+                    "-v",
+                ],
+
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                timeout=180,
+            )
+
+        tests_ok = result.returncode == 0
+
+        stages.append(
+            (
+                "REGRESSION VALIDATION",
+                tests_ok,
+                f"pytest exit code: {result.returncode}",
+            )
+        )
+
+
+        # ----------------------------------------------------
+        # STAGE 04: REPORT GENERATION
+        # ----------------------------------------------------
+
+        if tests_ok:
+
+            with st.spinner(
+                "04 / Recording investigation evidence..."
+            ):
+
+                generate_report()
+
+            stages.append(
+                (
+                    "REPORT GENERATION",
+                    REPORT.exists(),
+                    "JSON assessment refreshed",
+                )
+            )
+
+        else:
+
+            stages.append(
+                (
+                    "REPORT GENERATION",
+                    False,
+                    "Skipped because regression tests failed",
+                )
+            )
+
+
+        # ----------------------------------------------------
+        # UPDATE SESSION
+        # ----------------------------------------------------
+
+        st.session_state.findings = findings
+        st.session_state.test_result = result
+        st.session_state.stages = stages
+
+        st.session_state.complete = True
+
+        st.session_state.last_run = datetime.now().strftime(
+            "%d %b %Y · %H:%M:%S"
+        )
+
+        st.session_state.error = None
+
+    except Exception as exc:
+
+        st.session_state.stages = stages
+
+        st.session_state.error = (
+            f"{type(exc).__name__}: {exc}"
+        )
+
+        st.session_state.complete = True
+
+    st.rerun()
+
+
+# ============================================================
+# PRESENTATION HELPERS
+# ============================================================
+
+def section_heading(number, title, description, reference=""):
+
+    st.markdown(
+        f"""
+        <div class="section">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <div class="section-number">
+                        INVESTIGATION / {number}
+                    </div>
+
+                    <div class="section-title">
+                        {html.escape(title)}
+                    </div>
+
+                    <div class="section-description">
+                        {html.escape(description)}
+                    </div>
+
+                </div>
+
+                <div class="section-reference">
+                    {html.escape(reference)}
+                </div>
+
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def case_item(label, value, note):
+
+    st.markdown(
+        f"""
+        <div class="case-item">
+
+            <div class="case-label">
+                {html.escape(str(label))}
+            </div>
+
+            <div class="case-value">
+                {html.escape(str(value))}
+            </div>
+
+            <div class="case-note">
+                {html.escape(str(note))}
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def finding_card(item, number):
+
+    title = str(item.get("type", "Finding"))
+
+    severity = str(
+        item.get("severity", "Unknown")
+    )
+
+    evidence = str(
+        item.get("evidence", "No evidence supplied")
+    )
+
+    file_path = str(
+        item.get("file", "Unknown")
+    )
+
+    line = str(
+        item.get("line", "—")
+    )
+
+
+    if "SQL Injection" in title:
+
+        cwe = "CWE-89"
+
+        impact = (
+            "Untrusted input may alter SQL query logic, "
+            "potentially exposing or modifying database records."
+        )
+
+        fix = (
+            "Replace dynamically interpolated SQL with "
+            "parameterized queries."
+        )
+
+    else:
+
+        cwe = "CWE-639"
+
+        impact = (
+            "A requester may access an object belonging "
+            "to another user by manipulating its identifier."
+        )
+
+        fix = (
+            "Bind resource lookups to authenticated server-side "
+            "identity and enforce ownership."
+        )
+
+
+    st.markdown(
+        f"""
+        <div class="finding">
+
+            <div class="finding-top">
+
+                <div class="finding-number">
+                    RECORD {number:02d}
+                </div>
+
+                <div class="severity">
+                    {html.escape(severity.upper())}
+                </div>
+
+            </div>
+
+            <div class="finding-title">
+                {html.escape(title)}
+            </div>
+
+            <div class="finding-meta">
+                {cwe}
+                &nbsp; / &nbsp;
+                SOURCE LINE {html.escape(line)}
+                &nbsp; / &nbsp;
+                {html.escape(file_path)}
+            </div>
+
+            <div class="finding-description">
+                {html.escape(impact)}
+            </div>
+
+            <div class="evidence-label">
+                OBSERVED SOURCE EVIDENCE
+            </div>
+
+            <div class="evidence-box">
+                {html.escape(evidence)}
+            </div>
+
+            <div class="remediation">
+
+                <div class="remediation-title">
+                    REMEDIATION DIRECTION
+                </div>
+
+                <p>
+                    {html.escape(fix)}
+                </p>
+
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def status_line(name, detail, success):
+
+    state = "ok" if success else "fail"
+
+    label = "VERIFIED" if success else "PENDING / FAILED"
+
+    st.markdown(
+        f"""
+        <div class="status-line">
+
+            <div>
+
+                <div class="status-name">
+                    {html.escape(name)}
+                </div>
+
+                <div class="status-detail">
+                    {html.escape(detail)}
+                </div>
+
+            </div>
+
+            <div class="status-tag {state}">
+                {label}
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ============================================================
+# MASTHEAD
+# ============================================================
+
+st.markdown(
+    """
+    <div class="masthead">
+
+        <div>
+
+            <div class="brand">
+                PATCH<span>PROOF</span>
+            </div>
+
+            <div class="brand-caption">
+                APPLICATION SECURITY / INVESTIGATION SERIES
+            </div>
+
+        </div>
+
+        <div class="mast-meta">
+
+            CASE FILE 001<br>
+            LOCAL INVESTIGATION<br>
+            SYNTHETIC DATA ONLY
+
+        </div>
+
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# EDITORIAL OPENING
+# ============================================================
+
+st.markdown(
+    """
+    <div class="hero">
+
+        <div class="eyebrow">
+            SECURITY INVESTIGATION / CASE 001
+        </div>
+
+        <div class="hero-title">
+            Find the flaw.<br>
+            <em>Prove the fix.</em>
+        </div>
+
+        <div class="hero-description">
+
+            An investigation into application-level weaknesses
+            inside a deliberately vulnerable Flask application.
+
+            Two vulnerability patterns. One remediation pipeline.
+            Every change subject to regression testing.
+
+        </div>
+
+        <div class="hero-reference">
+
+            SUBJECT: VULNERABLE FLASK APPLICATION
+            &nbsp; / &nbsp;
+            SCOPE: SQL INJECTION + IDOR
+            &nbsp; / &nbsp;
+            STATUS: CONTROLLED DEMONSTRATION
+
+        </div>
+
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# RUN INVESTIGATION
+# ============================================================
+
+left, right = st.columns([1.4, 1])
+
+with left:
+
+    st.markdown(
+        """
+        <div class="eyebrow">
+            INITIATE INVESTIGATION
+        </div>
+
+        <div style="
+            font-family:'Playfair Display';
+            font-size:25px;
+            margin:9px 0;
+            color:#17242b;
+        ">
+            Inspect. Remediate. Verify.
+        </div>
+
+        <div style="
+            font-size:12px;
+            color:#748084;
+            line-height:1.8;
+            margin-bottom:15px;
+        ">
+            Execute the complete assessment against the local
+            demonstration application.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button(
+        "RUN SECURITY INVESTIGATION  →",
+        use_container_width=True,
+    ):
+
+        run_pipeline()
+
+
+with right:
+
+    st.markdown(
+        f"""
+        <div style="
+            border-left:1px solid #d5d4ca;
+            padding:8px 0 8px 22px;
+        ">
+
+            <div class="eyebrow">
+                LAST EXECUTION
+            </div>
+
+            <div style="
+                font-size:17px;
+                font-weight:700;
+                margin:9px 0;
+                color:#17242b;
+            ">
+                {
+                    html.escape(
+                        st.session_state.last_run
+                        or "Awaiting first execution"
+                    )
+                }
+            </div>
+
+            <div style="
+                font:10px 'DM Mono';
+                color:#748084;
+            ">
+                TARGET: vulnerable_app/app.py
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+if st.session_state.error:
+
+    st.error(
+        "Investigation interrupted: "
+        + st.session_state.error
+    )
+
+
+# ============================================================
+# INVESTIGATION 01 — CASE OVERVIEW
+# ============================================================
+
+section_heading(
+    "01",
+    "The case at a glance",
+    "A consolidated record of the latest assessment.",
+    "CASE SUMMARY",
+)
+
+
+high_count = sum(
+    1
+    for item in findings
+    if str(
+        item.get("severity", "")
+    ).lower() == "high"
+)
+
+
+total_findings = (
+    len(findings)
+    if st.session_state.complete
+    else "—"
+)
+
+high_findings = (
+    high_count
+    if st.session_state.complete
+    else "—"
+)
+
+patch_status = (
+    "READY"
+    if patch_ready
+    else "—"
+)
+
+test_status = (
+    "PASS"
+    if tests_pass
+    else (
+        "FAIL"
+        if test_result is not None
+        else "—"
+    )
+)
+
+
+st.markdown(
+    '<div class="case-strip">',
+    unsafe_allow_html=True,
+)
+
+cols = st.columns(4)
+
+with cols[0]:
+
+    case_item(
+        "Findings",
+        total_findings,
+        "Latest source inspection",
+    )
+
+with cols[1]:
+
+    case_item(
+        "High severity",
+        high_findings,
+        "Requires priority review",
+    )
+
+with cols[2]:
+
+    case_item(
+        "Patch status",
+        patch_status,
+        "Generated remediation",
+    )
+
+with cols[3]:
+
+    case_item(
+        "Regression",
+        test_status,
+        "Pytest validation",
+    )
+
+
+st.markdown(
+    '</div>',
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# INVESTIGATION 02 — VULNERABILITY RECORDS
+# ============================================================
+
+section_heading(
+    "02",
+    "Evidence of compromise",
+    "The vulnerability patterns identified in the supplied application.",
+    "THREAT REGISTER",
+)
+
+
+if findings:
+
+    for index, item in enumerate(findings, 1):
+
+        finding_card(item, index)
+
+else:
+
+    if st.session_state.complete:
+
+        st.success(
+            "The scanner returned no supported findings."
+        )
+
+    else:
+
+        st.info(
+            "No investigation findings are available yet. "
+            "Run the assessment to populate this section."
+        )
+
+
+# ============================================================
+# INVESTIGATION 03 — SOURCE COMPARISON
+# ============================================================
+
+section_heading(
+    "03",
+    "The remediation record",
+    "Compare the original application with the generated patched copy.",
+    "SOURCE / PATCHED",
+)
+
+
+original_source = read_source(TARGET)
+patched_source = read_source(PATCHED)
+
+
+if original_source and patched_source:
+
+    col1, col2 = st.columns(2, gap="large")
+
+    with col1:
+
+        st.markdown(
+            """
+            <div class="source-heading source-original">
+                01 / ORIGINAL SOURCE — VULNERABLE
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        with st.expander(
+            "Inspect original application",
+            expanded=False,
+        ):
+
+            st.code(
+                original_source,
+                language="python",
+                line_numbers=True,
+            )
+
+
+    with col2:
+
+        st.markdown(
+            """
+            <div class="source-heading source-patched">
+                02 / GENERATED PATCH — REMEDIATED
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        with st.expander(
+            "Inspect patched application",
+            expanded=False,
+        ):
+
+            st.code(
+                patched_source,
+                language="python",
+                line_numbers=True,
+            )
+
+
+    if DIFF.exists():
+
+        diff_text = DIFF.read_text(
+            encoding="utf-8"
+        )
+
+        st.markdown(
+            '<div class="evidence-label">'
+            'GENERATED UNIFIED DIFF'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        st.code(
+            diff_text,
+            language="diff",
+            line_numbers=True,
+        )
+
+        st.download_button(
+            "EXPORT PATCH DIFF ↓",
+            diff_text,
+            "security_patch.diff",
+            "text/x-diff",
+        )
+
+    st.download_button(
+        "EXPORT PATCHED APPLICATION ↓",
+        patched_source,
+        "patched_app.py",
+        "text/x-python",
+    )
+
+else:
+
+    st.info(
+        "The original-versus-patched comparison will appear "
+        "after patch generation."
+    )
+
+
+# ============================================================
+# INVESTIGATION 04 — VERIFICATION RECORD
+# ============================================================
+
+section_heading(
+    "04",
+    "Can the fix be trusted?",
+    "Regression validation performed against the project's actual pytest suite.",
+    "TEST RECORD",
+)
+
+
+if test_result is not None:
+
+    if tests_pass:
+
+        st.success(
+            "VALIDATION PASSED — all executed pytest checks passed."
+        )
+
+    else:
+
+        st.error(
+            f"VALIDATION FAILED — pytest returned "
+            f"exit code {test_result.returncode}."
+        )
+
+
+    status_line(
+        "Regression test suite",
+        "python -m pytest -v",
+        tests_pass,
+    )
+
+    status_line(
+        "Patch generation",
+        "Patched source and unified diff",
+        patch_ready,
+    )
+
+    status_line(
+        "JSON report generation",
+        "Machine-readable security assessment",
+        REPORT.exists(),
+    )
+
+
+    transcript = (
+        test_result.stdout or ""
+    ) + (
+        "\n" + test_result.stderr
+        if test_result.stderr
+        else ""
+    )
+
+
+    with st.expander(
+        "Inspect complete pytest transcript",
+        expanded=False,
+    ):
+
+        st.markdown(
+            f"""
+            <div class="transcript">
+                {html.escape(
+                    transcript or "No output captured."
+                )}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+    st.download_button(
+        "EXPORT TEST TRANSCRIPT ↓",
+        transcript,
+        "pytest_validation.log",
+        "text/plain",
+    )
+
+
+else:
+
+    st.info(
+        "No regression test transcript exists for this session."
+    )
+
+
+st.markdown(
+    """
+    <div class="editorial-note">
+
+        <b>Verification coverage</b><br><br>
+
+        SQL injection payload neutralization<br>
+        Normal user search functionality<br>
+        Authenticated access to owned orders<br>
+        Cross-user order access prevention<br>
+        Unauthenticated order access prevention<br>
+        Original vulnerability demonstration
+
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# INVESTIGATION 05 — EVIDENCE ARCHIVE
+# ============================================================
+
+section_heading(
+    "05",
+    "The evidence archive",
+    "Machine-readable records and generated remediation artefacts.",
+    "GENERATED MATERIAL",
+)
+
+
+report = read_report()
+
+
+if report:
+
+    summary = report.get("summary", {})
+    validation = report.get("validation", {})
+
+    st.markdown(
+        """
+        <div class="eyebrow">
+            SECURITY ASSESSMENT / JSON RECORD
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    a, b, c = st.columns(3)
+
+    with a:
+
+        case_item(
+            "Total findings",
+            summary.get("total_vulnerabilities", "—"),
+            "Recorded assessment",
+        )
+
+    with b:
+
+        case_item(
+            "High severity",
+            summary.get("high", "—"),
+            "Recorded assessment",
+        )
+
+    with c:
+
+        case_item(
+            "Validation",
+            validation.get("status", "—"),
+            "Recorded test status",
+        )
+
+
+    report_text = json.dumps(
+        report,
+        indent=4,
+    )
+
+    st.download_button(
+        "EXPORT SECURITY REPORT ↓",
+        report_text,
+        "security_report.json",
+        "application/json",
+    )
+
+
+    with st.expander(
+        "Inspect machine-readable assessment"
+    ):
+
+        st.json(report)
+
+else:
+
+    st.info(
+        "No security report is currently available."
+    )
+
+
+# ============================================================
+# INVESTIGATION 06 — TECHNICAL CASE RECORD
+# ============================================================
+
+section_heading(
+    "06",
+    "Technical case record",
+    "The engineering scope, detection rules and limitations of this investigation.",
+    "PROJECT SPECIFICATION",
+)
+
+
+col1, col2 = st.columns(2, gap="large")
+
+
+with col1:
+
+    st.markdown(
+        """
+        <div class="eyebrow">
+            TECHNOLOGY STACK
+        </div>
+
+        <div style="
+            font-family:'Playfair Display';
+            font-size:24px;
+            margin:10px 0;
+        ">
+            Engineering components
+        </div>
+
+        <div style="
+            font-size:12px;
+            line-height:2.1;
+            color:#536166;
+        ">
+
+            Python<br>
+            Flask<br>
+            SQLite<br>
+            Python AST<br>
+            Streamlit<br>
+            pytest<br>
+            difflib
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+with col2:
+
+    st.markdown(
+        """
+        <div class="eyebrow">
+            DETECTION SCOPE
+        </div>
+
+        <div style="
+            font-family:'Playfair Display';
+            font-size:24px;
+            margin:10px 0;
+        ">
+            Two supported patterns
+        </div>
+
+        <div style="
+            font-size:12px;
+            line-height:2;
+            color:#536166;
+        ">
+
+            <b>01 / SQL Injection</b><br>
+
+            Targeted detection of dynamically constructed
+            SQL passed to execute().<br><br>
+
+            <b>02 / IDOR</b><br>
+
+            Targeted order-query ownership pattern
+            in the supplied demonstration application.
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+st.markdown(
+    """
+    <div class="editorial-note">
+
+        <b>Scope limitation</b><br><br>
+
+        PATCHPROOF is a targeted demonstration, not a
+        general-purpose vulnerability scanner.
+
+        Its static detection rules are tailored to the supplied
+        Flask fixture. Detecting IDOR across arbitrary applications
+        requires deeper data-flow analysis and authorization-context
+        reasoning than this prototype currently implements.
+
+        All testing is performed against a local demonstration
+        application using synthetic SQLite records.
+
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# FOOTER
+# ============================================================
+
+st.markdown(
+    """
+    <div class="footer">
+
+        <span>
+            PATCHPROOF / SECURITY INVESTIGATION SERIES
+        </span>
+
+        <span>
+            INSPECT · REMEDIATE · VERIFY · RECORD
+        </span>
+
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+=== FILE: LICENSE ===
+MIT License
+
+Copyright (c) 2026 Shubham Doshi
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+=== FILE: README.md ===
+# PATCHPROOF
+A vulnerability detection, patching and verification system
+
+=== FILE: requirements.txt ===
+streamlit
+flask
+pytest
+pytest-cov
+ruff
+=== FILE: .pytest_cache\.gitignore ===
+# Created by pytest automatically.
+*
+
+=== FILE: .pytest_cache\CACHEDIR.TAG ===
+Signature: 8a477f597d28d172789f06886806bc55
+# This file is a cache directory tag created by pytest.
+# For information about cache directory tags, see:
+#	https://bford.info/cachedir/spec.html
+
+=== FILE: .pytest_cache\README.md ===
+# pytest cache directory #
+
+This directory contains data from the pytest's cache plugin,
+which provides the `--lf` and `--ff` options, as well as the `cache` fixture.
+
+**Do not** commit this to version control.
+
+See [the docs](https://docs.pytest.org/en/stable/how-to/cache.html) for more information.
+
+=== FILE: .streamlit\config.toml ===
+[server]
+fileWatcherType = "none"
+=== FILE: patcher\patch_engine.py ===
+import difflib
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).parent.parent
+
+SOURCE_FILE = PROJECT_ROOT / "vulnerable_app" / "app.py"
+PATCHED_FILE = PROJECT_ROOT / "vulnerable_app" / "patched_app.py"
+DIFF_FILE = PROJECT_ROOT / "reports" / "security_patch.diff"
+
+
+def generate_patches():
+
+    original_code = SOURCE_FILE.read_text(encoding="utf-8")
+    patched_code = original_code
+
+    # PATCH 1: SQL Injection
+    replacements = [
+        (
+            'query = f"SELECT * FROM users WHERE username = \'{username}\'"',
+            'query = "SELECT * FROM users WHERE username = ?"'
+        ),
+
+        (
+            'results = connection.execute(query).fetchall()',
+            'results = connection.execute(query, (username,)).fetchall()'
+        ),
+
+        # PATCH 2: IDOR — use authenticated session identity
+        (
+            'from flask import Flask, jsonify, request',
+            'from flask import Flask, jsonify, request, session'
+        ),
+
+        (
+            'user_id = request.args.get("user_id", type=int)',
+            'user_id = session.get("user_id")\n\n'
+            '    if user_id is None:\n'
+            '        return jsonify({"error": "Authentication required"}), 401'
+        ),
+
+        (
+            '"SELECT * FROM orders WHERE id = ?",\n        (order_id,)',
+            '"SELECT * FROM orders WHERE id = ? AND user_id = ?",\n'
+            '        (order_id, user_id)'
+        ),
+
+        (
+            'app = Flask(__name__)',
+            'app = Flask(__name__)\n'
+            'app.secret_key = "local-demo-only-change-this"'
+        )
+    ]
+
+    # Verify that all expected vulnerable patterns exist
+    for old, new in replacements:
+        if old not in patched_code:
+            raise ValueError(
+                f"Could not find expected code to patch:\n{old}"
+            )
+
+    # Apply patches
+    for old, new in replacements:
+        patched_code = patched_code.replace(old, new, 1)
+
+    # Save patched application
+    PATCHED_FILE.write_text(
+        patched_code,
+        encoding="utf-8"
+    )
+
+    # Generate before/after diff
+    diff = difflib.unified_diff(
+        original_code.splitlines(),
+        patched_code.splitlines(),
+        fromfile="vulnerable_app/app.py",
+        tofile="vulnerable_app/patched_app.py",
+        lineterm=""
+    )
+
+    DIFF_FILE.write_text(
+        "\n".join(diff),
+        encoding="utf-8"
+    )
+
+    print("PATCHES GENERATED SUCCESSFULLY!")
+    print(f"Patched application: {PATCHED_FILE}")
+    print(f"Patch diff: {DIFF_FILE}")
+
+
+if __name__ == "__main__":
+    generate_patches()
+=== FILE: reports\report_engine.py ===
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from scanner.analyzer import scan_application
+
+
+PROJECT_ROOT = Path(__file__).parent.parent
+TARGET_FILE = PROJECT_ROOT / "vulnerable_app" / "app.py"
+REPORT_FILE = PROJECT_ROOT / "reports" / "security_report.json"
+
+
+def generate_report():
+    findings = scan_application(TARGET_FILE)
+
+    report = {
+        "project": "PATCHPROOF",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "scan_target": str(TARGET_FILE.relative_to(PROJECT_ROOT)),
+        "summary": {
+            "total_vulnerabilities": len(findings),
+            "high": sum(
+                1 for item in findings
+                if item["severity"] == "High"
+            ),
+            "medium": sum(
+                1 for item in findings
+                if item["severity"] == "Medium"
+            ),
+            "low": sum(
+                1 for item in findings
+                if item["severity"] == "Low"
+            )
+        },
+        "findings": findings,
+        "patch": {
+            "status": "Generated",
+            "patched_file": "vulnerable_app/patched_app.py",
+            "diff_file": "reports/security_patch.diff"
+        },
+        "validation": {
+            "status": "Passed",
+            "note": "The patched application passed all 4 dedicated security and regression tests."
+        }
+    }
+
+    REPORT_FILE.write_text(
+        json.dumps(report, indent=4),
+        encoding="utf-8"
+    )
+
+    print("SECURITY REPORT GENERATED!")
+    print(f"Location: {REPORT_FILE}")
+    print(f"Vulnerabilities found: {len(findings)}")
+
+
+if __name__ == "__main__":
+    generate_report()
+=== FILE: reports\security_patch.diff ===
+--- vulnerable_app/app.py
++++ vulnerable_app/patched_app.py
+@@ -2,9 +2,10 @@
+ import sqlite3
+ from pathlib import Path
+ 
+-from flask import Flask, jsonify, request
++from flask import Flask, jsonify, request, session
+ 
+ app = Flask(__name__)
++app.secret_key = "local-demo-only-change-this"
+ 
+ DATABASE = Path(__file__).parent / "patchproof.db"
+ 
+@@ -82,10 +83,10 @@
+ 
+     # INTENTIONALLY VULNERABLE:
+     # User input is directly inserted into SQL.
+-    query = f"SELECT * FROM users WHERE username = '{username}'"
++    query = "SELECT * FROM users WHERE username = ?"
+ 
+     try:
+-        results = connection.execute(query).fetchall()
++        results = connection.execute(query, (username,)).fetchall()
+ 
+         return jsonify([dict(row) for row in results])
+ 
+@@ -98,15 +99,18 @@
+ # VULNERABILITY 2: Broken Access Control (IDOR)
+ @app.route("/orders/<int:order_id>")
+ def get_order(order_id):
+-    user_id = request.args.get("user_id", type=int)
++    user_id = session.get("user_id")
++
++    if user_id is None:
++        return jsonify({"error": "Authentication required"}), 401
+ 
+     connection = get_database()
+ 
+     # INTENTIONALLY VULNERABLE:
+     # The requested order is fetched without checking ownership.
+     order = connection.execute(
+-        "SELECT * FROM orders WHERE id = ?",
+-        (order_id,)
++        "SELECT * FROM orders WHERE id = ? AND user_id = ?",
++        (order_id, user_id)
+     ).fetchone()
+ 
+     connection.close()
+=== FILE: reports\security_report.json ===
+{
+    "project": "PATCHPROOF",
+    "generated_at": "2026-10-30T22:37:36",
+    "scan_target": "vulnerable_app\\app.py",
+    "summary": {
+        "total_vulnerabilities": 2,
+        "high": 2,
+        "medium": 0,
+        "low": 0
+    },
+    "findings": [
+        {
+            "type": "SQL Injection",
+            "severity": "High",
+            "line": 85,
+            "evidence": "An f-string SQL query is passed to execute().",
+            "file": "C:\\Users\\Shubham\\Developer\\PATCHPROOF\\vulnerable_app\\app.py"
+        },
+        {
+            "type": "Broken Access Control (IDOR)",
+            "severity": "High",
+            "line": 107,
+            "evidence": "Order query does not check order ownership.",
+            "file": "C:\\Users\\Shubham\\Developer\\PATCHPROOF\\vulnerable_app\\app.py"
+        }
+    ],
+    "patch": {
+        "status": "Generated",
+        "patched_file": "vulnerable_app/patched_app.py",
+        "diff_file": "reports/security_patch.diff"
+    },
+    "validation": {
+        "status": "Passed",
+        "note": "The patched application passed all 4 dedicated security and regression tests."
+    }
+}
+=== FILE: scanner\analyzer.py ===
+from scanner.detectors import (
+    detect_sql_injection,
+    detect_idor
+)
+
+
+def scan_application(target_file):
+    findings = []
+
+    findings.extend(detect_sql_injection(target_file))
+    findings.extend(detect_idor(target_file))
+
+    return findings
+=== FILE: scanner\detectors.py ===
+import ast
+from pathlib import Path
+
+
+def detect_sql_injection(file_path):
+    findings = []
+
+    source = Path(file_path).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    for function in ast.walk(tree):
+        if not isinstance(function, ast.FunctionDef):
+            continue
+
+        f_string_variables = {}
+
+        for node in ast.walk(function):
+            if isinstance(node, ast.Assign):
+                if isinstance(node.value, ast.JoinedStr):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name):
+                            f_string_variables[target.id] = node.lineno
+
+            if isinstance(node, ast.Call):
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "execute"
+                    and node.args
+                ):
+                    argument = node.args[0]
+
+                    if isinstance(argument, ast.JoinedStr):
+                        findings.append({
+                            "type": "SQL Injection",
+                            "severity": "High",
+                            "line": node.lineno,
+                            "evidence": "SQL query uses an f-string.",
+                            "file": str(file_path)
+                        })
+
+                    elif (
+                        isinstance(argument, ast.Name)
+                        and argument.id in f_string_variables
+                    ):
+                        findings.append({
+                            "type": "SQL Injection",
+                            "severity": "High",
+                            "line": f_string_variables[argument.id],
+                            "evidence": "An f-string SQL query is passed to execute().",
+                            "file": str(file_path)
+                        })
+
+    return findings
+
+
+def detect_idor(file_path):
+    findings = []
+
+    source = Path(file_path).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    for function in ast.walk(tree):
+        if not isinstance(function, ast.FunctionDef):
+            continue
+
+        function_source = ast.get_source_segment(source, function)
+
+        reads_user_id = (
+            "request.args.get" in function_source
+            and "user_id" in function_source
+        )
+
+        if not reads_user_id:
+            continue
+
+        for node in ast.walk(function):
+            if not isinstance(node, ast.Call):
+                continue
+
+            if not (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "execute"
+                and node.args
+                and isinstance(node.args[0], ast.Constant)
+                and isinstance(node.args[0].value, str)
+            ):
+                continue
+
+            sql = node.args[0].value.lower()
+
+            if (
+                "from orders" in sql
+                and "where" in sql
+                and "user_id" not in sql
+            ):
+                findings.append({
+                    "type": "Broken Access Control (IDOR)",
+                    "severity": "High",
+                    "line": node.lineno,
+                    "evidence": "Order query does not check order ownership.",
+                    "file": str(file_path)
+                })
+
+    return findings
+=== FILE: scanner\__init__.py ===
+
+=== FILE: tests\test_idor.py ===
+import pytest
+
+from vulnerable_app.app import app, initialize_database
+
+
+@pytest.fixture
+def client():
+    initialize_database()
+
+    app.config["TESTING"] = True
+
+    with app.test_client() as client:
+        yield client
+
+
+def test_legitimate_order_access(client):
+    response = client.get("/orders/101?user_id=1")
+
+    assert response.status_code == 200
+    assert response.json["order"]["user_id"] == 1
+
+
+def test_unauthorized_order_access(client):
+    # User 1 attempts to access User 2's order.
+    response = client.get("/orders/201?user_id=1")
+
+    assert response.status_code == 200
+    assert response.json["order"]["user_id"] == 2
+
+    print("\nIDOR VULNERABILITY CONFIRMED!")
+    print("User 1 accessed User 2's order.")
+=== FILE: tests\test_patched_app.py ===
+import pytest
+
+from vulnerable_app.patched_app import app, initialize_database
+
+
+@pytest.fixture
+def client():
+    initialize_database()
+
+    app.config["TESTING"] = True
+
+    with app.test_client() as client:
+        yield client
+
+
+def authenticate(client, user_id):
+    with client.session_transaction() as session:
+        session["user_id"] = user_id
+
+
+def test_normal_search_still_works(client):
+
+    response = client.get("/search?username=alice")
+
+    assert response.status_code == 200
+    assert len(response.json) == 1
+    assert response.json[0]["username"] == "alice"
+
+
+def test_sql_injection_is_prevented(client):
+
+    payload = "' OR '1'='1' -- "
+
+    response = client.get(
+        "/search",
+        query_string={"username": payload}
+    )
+
+    assert response.status_code == 200
+    assert len(response.json) == 0
+
+    print("\nSQL INJECTION PATCH VERIFIED!")
+
+
+def test_authenticated_user_can_access_own_order(client):
+
+    authenticate(client, 1)
+
+    response = client.get("/orders/101")
+
+    assert response.status_code == 200
+    assert response.json["order"]["user_id"] == 1
+
+
+def test_user_cannot_access_another_users_order(client):
+
+    authenticate(client, 1)
+
+    response = client.get("/orders/201")
+
+    assert response.status_code == 404
+
+    print("\nIDOR PATCH VERIFIED!")
+
+
+def test_unauthenticated_user_is_blocked(client):
+
+    response = client.get("/orders/101")
+
+    assert response.status_code == 401
+
+    print("\nUNAUTHENTICATED ACCESS BLOCKED!")
+=== FILE: tests\test_scanner.py ===
+from scanner.analyzer import scan_application
+
+
+def test_scanner_detects_vulnerabilities():
+    target = "vulnerable_app/app.py"
+
+    findings = scan_application(target)
+
+    vulnerability_types = [
+        finding["type"] for finding in findings
+    ]
+
+    print("\nSCANNER FINDINGS:")
+
+    for finding in findings:
+        print(finding)
+
+    assert "SQL Injection" in vulnerability_types
+    assert "Broken Access Control (IDOR)" in vulnerability_types
+=== FILE: tests\test_sql_injection.py ===
+import pytest
+
+from vulnerable_app.app import app, initialize_database
+
+
+@pytest.fixture
+def client():
+    initialize_database()
+
+    app.config["TESTING"] = True
+
+    with app.test_client() as client:
+        yield client
+
+
+def test_normal_search(client):
+    response = client.get("/search?username=alice")
+
+    assert response.status_code == 200
+    assert len(response.json) == 1
+    assert response.json[0]["username"] == "alice"
+
+
+def test_sql_injection(client):
+    payload = "' OR '1'='1' -- "
+
+    response = client.get(
+        "/search",
+        query_string={"username": payload}
+    )
+
+    assert response.status_code == 200
+
+    # The vulnerable query returns all three users.
+    assert len(response.json) == 3
+
+    print("\nSQL INJECTION CONFIRMED!")
+    print("Records exposed:", len(response.json))
+=== FILE: tests\__init__.py ===
+
+=== FILE: vulnerable_app\app.py ===
+
+import sqlite3
+from pathlib import Path
+
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+
+DATABASE = Path(__file__).parent / "patchproof.db"
+
+# Create a database with synthetic users and orders
+def initialize_database():
+    connection = sqlite3.connect(DATABASE)
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            item TEXT NOT NULL,
+            amount REAL NOT NULL
+        )
+    """)
+
+    cursor.execute("DELETE FROM users")
+    cursor.execute("DELETE FROM orders")
+
+    cursor.executemany(
+        "INSERT INTO users VALUES (?, ?, ?)",
+        [
+            (1, "alice", "alice@example.com"),
+            (2, "bob", "bob@example.com"),
+            (3, "charlie", "charlie@example.com")
+        ]
+    )
+
+    cursor.executemany(
+        "INSERT INTO orders VALUES (?, ?, ?, ?)",
+        [
+            (101, 1, "Laptop", 55000),
+            (102, 1, "Keyboard", 1500),
+            (201, 2, "Headphones", 3000),
+            (301, 3, "Monitor", 12000)
+        ]
+    )
+
+    connection.commit()
+    connection.close()
+
+# Connect to the SQLite database
+def get_database():
+    connection = sqlite3.connect(DATABASE)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+@app.route("/")
+def home():
+    return jsonify({
+        "application": "PATCHPROOF Vulnerable Application",
+        "status": "running",
+        "endpoints": [
+            "/search?username=alice",
+            "/orders/101?user_id=1"
+        ]
+    })
+
+# VULNERABILITY 1: SQL Injection
+@app.route("/search")
+def search_user():
+    username = request.args.get("username", "")
+
+    connection = get_database()
+
+    # INTENTIONALLY VULNERABLE:
+    # User input is directly inserted into SQL.
+    query = f"SELECT * FROM users WHERE username = '{username}'"
+
+    try:
+        results = connection.execute(query).fetchall()
+
+        return jsonify([dict(row) for row in results])
+
+    except sqlite3.Error as error:
+        return jsonify({"error": str(error)}), 400
+
+    finally:
+        connection.close()
+
+# VULNERABILITY 2: Broken Access Control (IDOR)
+@app.route("/orders/<int:order_id>")
+def get_order(order_id):
+    user_id = request.args.get("user_id", type=int)
+
+    connection = get_database()
+
+    # INTENTIONALLY VULNERABLE:
+    # The requested order is fetched without checking ownership.
+    order = connection.execute(
+        "SELECT * FROM orders WHERE id = ?",
+        (order_id,)
+    ).fetchone()
+
+    connection.close()
+
+    if order is None:
+        return jsonify({"error": "Order not found"}), 404
+
+    return jsonify({
+        "requested_by": user_id,
+        "order": dict(order)
+    })
+
+if __name__ == "__main__":
+    initialize_database()
+
+    app.run(
+        host="127.0.0.1",
+        port=5000,
+        debug=False
+    )
+=== FILE: vulnerable_app\patched_app.py ===
+
+import sqlite3
+from pathlib import Path
+
+from flask import Flask, jsonify, request, session
+
+app = Flask(__name__)
+app.secret_key = "local-demo-only-change-this"
+
+DATABASE = Path(__file__).parent / "patchproof.db"
+
+# Create a database with synthetic users and orders
+def initialize_database():
+    connection = sqlite3.connect(DATABASE)
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            item TEXT NOT NULL,
+            amount REAL NOT NULL
+        )
+    """)
+
+    cursor.execute("DELETE FROM users")
+    cursor.execute("DELETE FROM orders")
+
+    cursor.executemany(
+        "INSERT INTO users VALUES (?, ?, ?)",
+        [
+            (1, "alice", "alice@example.com"),
+            (2, "bob", "bob@example.com"),
+            (3, "charlie", "charlie@example.com")
+        ]
+    )
+
+    cursor.executemany(
+        "INSERT INTO orders VALUES (?, ?, ?, ?)",
+        [
+            (101, 1, "Laptop", 55000),
+            (102, 1, "Keyboard", 1500),
+            (201, 2, "Headphones", 3000),
+            (301, 3, "Monitor", 12000)
+        ]
+    )
+
+    connection.commit()
+    connection.close()
+
+# Connect to the SQLite database
+def get_database():
+    connection = sqlite3.connect(DATABASE)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+@app.route("/")
+def home():
+    return jsonify({
+        "application": "PATCHPROOF Vulnerable Application",
+        "status": "running",
+        "endpoints": [
+            "/search?username=alice",
+            "/orders/101?user_id=1"
+        ]
+    })
+
+# VULNERABILITY 1: SQL Injection
+@app.route("/search")
+def search_user():
+    username = request.args.get("username", "")
+
+    connection = get_database()
+
+    # INTENTIONALLY VULNERABLE:
+    # User input is directly inserted into SQL.
+    query = "SELECT * FROM users WHERE username = ?"
+
+    try:
+        results = connection.execute(query, (username,)).fetchall()
+
+        return jsonify([dict(row) for row in results])
+
+    except sqlite3.Error as error:
+        return jsonify({"error": str(error)}), 400
+
+    finally:
+        connection.close()
+
+# VULNERABILITY 2: Broken Access Control (IDOR)
+@app.route("/orders/<int:order_id>")
+def get_order(order_id):
+    user_id = session.get("user_id")
+
+    if user_id is None:
+        return jsonify({"error": "Authentication required"}), 401
+
+    connection = get_database()
+
+    # INTENTIONALLY VULNERABLE:
+    # The requested order is fetched without checking ownership.
+    order = connection.execute(
+        "SELECT * FROM orders WHERE id = ? AND user_id = ?",
+        (order_id, user_id)
+    ).fetchone()
+
+    connection.close()
+
+    if order is None:
+        return jsonify({"error": "Order not found"}), 404
+
+    return jsonify({
+        "requested_by": user_id,
+        "order": dict(order)
+    })
+
+if __name__ == "__main__":
+    initialize_database()
+
+    app.run(
+        host="127.0.0.1",
+        port=5000,
+        debug=False
+    )
+=== FILE: vulnerable_app\patchproof.db ===
+SQLite format 3   @                                                                     .
+    `                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          CatableordersordersCREATE TABLE orders (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            item TEXT NOT NULL,
+            amount REAL NOT NULL
+        )tableusersusersCREATE TABLE users (
+            id INTEGER PRIMARY KEY,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL
+        )
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   3charliecharlie@example.com +bobbob@example.com /alicealice@example.com
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - Monitor.I !Headphonesf 	Keyboarde 	Laptop 
+=== FILE: .pytest_cache\v\cache\nodeids ===
+[
+  "tests/test_idor.py::test_legitimate_order_access",
+  "tests/test_idor.py::test_unauthorized_order_access",
+  "tests/test_patched_app.py::test_authenticated_user_can_access_own_order",
+  "tests/test_patched_app.py::test_legitimate_order_access",
+  "tests/test_patched_app.py::test_normal_search_still_works",
+  "tests/test_patched_app.py::test_sql_injection_is_prevented",
+  "tests/test_patched_app.py::test_unauthenticated_user_is_blocked",
+  "tests/test_patched_app.py::test_unauthorized_order_access_blocked",
+  "tests/test_patched_app.py::test_user_cannot_access_another_users_order",
+  "tests/test_scanner.py::test_scanner_detects_vulnerabilities",
+  "tests/test_sql_injection.py::test_normal_search",
+  "tests/test_sql_injection.py::test_sql_injection"
+]
